@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package version="3.0" xmlns="http://www.idpf.org/2007/opf" unique-identifier="uuid">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:identifier id="uuid">{{ uuid }}</dc:identifier>
+    <dc:title>{{ title }}</dc:title>
+    <dc:creator>{{ author }}</dc:creator>
+    <dc:language>{{ lang if lang else 'en' }}</dc:language>
+    <meta property="dcterms:modified">{{ date }}</meta>
+  </metadata>
+  <manifest>
+    <item id="content" href="content.xhtml" media-type="application/xhtml+xml"/>
+    {% for image in images %}
+    <item id="id-im{{ image.image_id }}" href="images/{{ image.name }}" media-type="{{ image.name|mediatype }}"/>
+    {% endfor %}
+    <!--<item id="htmltoc" properties="nav" media-type="application/xhtml+xml" href="toc.xhtml"/>
+    <item href="toc.ncx" id="toc" media-type="application/x-dtbncx+xml"/>
+    <item media-type="text/css" id="css" href="css/stylesheet.css"/>
+    Add any images, css, fonts or other resources here -->
+  </manifest>
+  <spine>
+    <itemref idref="content"/>
+  </spine>
+</package>
