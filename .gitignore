@@ -7,3 +7,4 @@ venv
 .pytest_cache
 *.egg-info
 notes.md
+test-epub
