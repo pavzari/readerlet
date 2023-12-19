@@ -7,6 +7,61 @@ import requests
 from urllib.parse import urlparse, urljoin
 
 
+class Article:
+    def __init__(self, url, title, byline, content):
+        self.url = url
+        self.title = title
+        self.byline = byline
+        self.content = content
+        self.images = []
+
+    def strip_hyperlinks(self):
+        """Strip the <a> tag attributes but keep the tags and content"""
+        soup = BeautifulSoup(self.content, "html.parser")
+        for a in soup.find_all("a"):
+            for attr in list(a.attrs.keys()):
+                del a[attr]
+        self.content = str(soup)
+
+    def strip_images(self):
+        """Strip all the <img> tags"""
+        soup = BeautifulSoup(self.content, "html.parser")
+        for img in soup.find_all("img"):
+            img.decompose()
+        self.content = str(soup)
+
+    def download_image(self, url, images_dir):
+        response = requests.get(url, stream=True)
+        if response.status_code == 200:
+            # html rendering issues if image name contains %!
+            filename = os.path.join(images_dir, os.path.basename(urlparse(url).path))
+            with open(filename, "wb") as file:
+                for chunk in response.iter_content(1024):
+                    file.write(chunk)
+            return filename
+        return None
+
+    def extract_images(self):
+        images_dir = "images"
+        if not os.path.exists(images_dir):
+            os.makedirs(images_dir)
+
+        soup = BeautifulSoup(self.content, "html.parser")
+
+        for img_tag in soup.find_all("img"):
+            src = img_tag.get("src")
+            if src:
+                absolute_url = urljoin(self.url, src)
+                image_path = self.download_image(absolute_url, images_dir)
+                if image_path:
+                    img_tag["src"] = image_path
+                    self.images.append(image_path)
+                    print(f"Downloaded and replaced: {absolute_url} -> {image_path}")
+                else:
+                    print(f"Failed to download: {absolute_url}")
+        self.content = str(soup)
+
+
 def check_node_installed() -> bool:
     # node version constraints?
     try:
@@ -42,7 +97,7 @@ def install_npm_packages() -> None:
         print("Node.js is not installed.")
 
 
-def extract_content(url: str) -> dict:
+def extract_content(url: str) -> Article:
     try:
         readability = subprocess.run(
             ["node", "js/extract_stdout.js", url],
@@ -50,61 +105,15 @@ def extract_content(url: str) -> dict:
             text=True,
             check=True,
         )
-        article = json.loads(readability.stdout)
-        return article
+        article_data = json.loads(readability.stdout)
+
+        title = article_data.get("title", "No Title")
+        byline = article_data.get("byline", f"Unknown Author ({urlparse(url).netloc})")
+        content = article_data.get("content", "")
+        return Article(url, title, byline, content)
+
     except subprocess.CalledProcessError:
         print("Error extracting article.")
-
-
-def strip_hyperlinks(html: str) -> str:
-    """Strip the <a> tag attributes but keep the tags and content"""
-    soup = BeautifulSoup(html, "html.parser")
-    for a in soup.find_all("a"):
-        for attr in list(a.attrs.keys()):
-            del a[attr]
-    return str(soup)
-
-
-def strip_images(html: str) -> str:
-    """Strip all the <img> tags"""
-    soup = BeautifulSoup(html, "html.parser")
-    for img in soup.find_all("img"):
-        img.decompose()
-    return str(soup)
-
-
-def download_image(url, directory):
-    response = requests.get(url, stream=True)
-    if response.status_code == 200:
-        filename = os.path.join(directory, os.path.basename(urlparse(url).path))
-        with open(filename, "wb") as file:
-            for chunk in response.iter_content(1024):
-                file.write(chunk)
-        return filename
-    return None
-
-
-def extract_images(page_html, page_url):
-    images_dir = "images"
-    if not os.path.exists(images_dir):
-        os.makedirs(images_dir)
-
-    soup = BeautifulSoup(page_html, "html.parser")
-
-    for img_tag in soup.find_all("img"):
-        src = img_tag.get("src")
-
-        if src:
-            absolute_url = urljoin(page_url, src)
-            image_path = download_image(absolute_url, images_dir)
-
-            if image_path:
-                img_tag["src"] = image_path
-                print(f"Downloaded and replaced: {absolute_url} -> {image_path}")
-            else:
-                print(f"Failed to download: {absolute_url}")
-
-    return str(soup)
 
 
 if __name__ == "__main__":
@@ -112,11 +121,14 @@ if __name__ == "__main__":
     install_npm_packages()
     article = extract_content(url)
 
+    print(article.title)
+    print(article.byline)
+    # print(article["byline"])
+
     # article = strip_hyperlinks(article["content"])
     # article = strip_images(article)
+    # article.extract_images()
 
-    article = extract_images(article["content"], url)
-
-    f = open("article.html", "w")
-    f.write(article)
-    f.close()
+    # f = open("article.html", "w")
+    # f.write(article.content)
+    # f.close()
