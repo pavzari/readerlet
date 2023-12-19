@@ -3,7 +3,7 @@ import click
 import json
 import subprocess
 from contextlib import chdir
-from article import Article
+from readerlet.article import Article
 from urllib.parse import urlparse
 
 
@@ -27,6 +27,7 @@ def install_npm_packages() -> None:
         node_modules_dir = os.path.join(javascript_dir, "node_modules")
 
         if not os.path.exists(node_modules_dir):
+            click.echo("Installing required npm packages...")
             with chdir(javascript_dir):
                 try:
                     subprocess.run(
@@ -56,7 +57,7 @@ def extract_content(url: str) -> Article:
             title = article_data.get("title", "No Title")
             byline = article_data.get("byline", f"{urlparse(url).netloc}")
             content = article_data.get("content", "")
-            text_content = article_data.get("content", "")
+            text_content = article_data.get("textContent", "")
             return Article(url, title, byline, content, text_content)
 
     except subprocess.CalledProcessError:
@@ -82,14 +83,14 @@ def extract_content(url: str) -> Article:
     "--strip-hyperlinks",
     "-s",
     is_flag=True,
-    default=True,
+    default=False,
     help="Remove hyperlinks from the content.",
 )
 @click.option(
     "--strip-images",
     "-i",
     is_flag=True,
-    default=True,
+    default=False,
     help="Remove images from the content.",
 )
 @click.option(
@@ -107,8 +108,8 @@ def extract_content(url: str) -> Article:
 @click.option(
     "--stdout",
     "-o",
-    is_flag=True,
-    help="Print the plain text content to stdout (pipe-friendly).",
+    type=click.Choice(["html", "text"]),
+    help="Specify the output format (html or text without html). If used, content will be printed to stdout.",
 )
 def cli(
     url,
@@ -122,6 +123,7 @@ def cli(
 ):
     install_npm_packages()
     article = extract_content(url)
+    article.extract_images()
 
     article.strip_hyperlinks() if strip_hyperlinks else None
     article.strip_images() if strip_images else None
@@ -133,22 +135,14 @@ def cli(
             pass
 
     if output_pdf:
-        pass
-
+        raise click.ClickException("Not implemented.")
     if output_markdown:
-        pass
+        raise click.ClickException("Not implemented.")
+    if stdout == "html":
+        click.echo(article.content)
+    elif stdout == "text":
+        click.echo(article.text_content)
 
-    if stdout:
-        print(article.content)
-
-
-# print(article.title)
-# print(article.byline)
-# # print(article["byline"])
-
-# # article = strip_hyperlinks(article["content"])
-# # article = strip_images(article)
-# # article.extract_images()
 
 # # f = open("article.html", "w")
 # # f.write(article.content)

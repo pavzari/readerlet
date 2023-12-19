@@ -22,10 +22,11 @@ class Article:
         self.content = str(soup)
 
     def strip_images(self):
-        """Strip all the <img> tags"""
+        """Strip all image-related elements from the content"""
+        tags_to_remove = ["img", "figure", "picture"]
         soup = BeautifulSoup(self.content, "html.parser")
-        for img in soup.find_all("img"):
-            img.decompose()
+        for tag in soup.find_all(tags_to_remove):
+            tag.decompose()
         self.content = str(soup)
 
     def download_image(self, url, images_dir):
