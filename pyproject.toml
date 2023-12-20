@@ -12,7 +12,9 @@ classifiers = [
 dependencies = [
     "click",
     "bs4",
-    "requests"
+    "requests",
+    "stkclient"
+
 ]
 
 [project.urls]

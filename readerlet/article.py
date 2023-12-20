@@ -1,7 +1,7 @@
 import os
-from bs4 import BeautifulSoup
 import requests
-from urllib.parse import urlparse, urljoin
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin, urlparse
 
 
 class Article:
@@ -14,7 +14,7 @@ class Article:
         self.images = []
 
     def strip_hyperlinks(self):
-        """Strip the <a> tag attributes but keep the tags and content"""
+        """Strip <a> tag attributes but keep the tags and content."""
         soup = BeautifulSoup(self.content, "html.parser")
         for a in soup.find_all("a"):
             for attrb in list(a.attrs.keys()):
@@ -22,7 +22,7 @@ class Article:
         self.content = str(soup)
 
     def strip_images(self):
-        """Strip all image-related elements from the content"""
+        """Strip all image-related elements from the content."""
         tags_to_remove = ["img", "figure", "picture"]
         soup = BeautifulSoup(self.content, "html.parser")
         for tag in soup.find_all(tags_to_remove):

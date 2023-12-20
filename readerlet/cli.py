@@ -2,6 +2,7 @@ import os
 import click
 import json
 import subprocess
+import stkclient
 from contextlib import chdir
 from readerlet.article import Article
 from urllib.parse import urlparse
@@ -64,8 +65,16 @@ def extract_content(url: str) -> Article:
         raise click.ClickException("Error extracting article.")
 
 
-@click.command()
+@click.group()
 @click.version_option()
+def cli():
+    """
+    readerlet.
+    """
+    pass
+
+
+@cli.command()
 @click.argument("url", required=True)
 @click.option(
     "--output-epub",
@@ -111,7 +120,7 @@ def extract_content(url: str) -> Article:
     type=click.Choice(["html", "text"]),
     help="Specify the output format (html or text without html). If used, content will be printed to stdout.",
 )
-def cli(
+def extract(
     url,
     output_epub,
     send_to_kindle,
@@ -121,6 +130,9 @@ def cli(
     output_markdown,
     stdout,
 ):
+    """
+    Extract and format a web content.
+    """
     install_npm_packages()
     article = extract_content(url)
     article.extract_images()
@@ -142,6 +154,33 @@ def cli(
         click.echo(article.content)
     elif stdout == "text":
         click.echo(article.text_content)
+
+
+@cli.command()
+def kindle_auth():
+    """
+    Configure authentication with Kindle service on Amazon.
+    """
+    auth = stkclient.OAuth2()
+    signin_url = auth.get_signin_url()
+    click.echo(
+        f"Please go to the following URL to sign in and authorize the application with Amazon's Kindle service:\n{signin_url}"
+    )
+
+    while True:
+        try:
+            redirect_url = input("Paste the redirect URL from the authorization page:")
+            client = auth.create_client(redirect_url)
+            click.echo(f"Authentication successful. Client details:\n{client}")
+
+            with open("readerlet-kindle-client.json", "w") as f:
+                client.dump(f)
+
+            click.echo("Authentication details saved to 'client.json'.")
+        except (EOFError, KeyboardInterrupt):
+            break
+        except Exception as e:
+            click.echo(f"Error during authentication: {e}")
 
 
 # # f = open("article.html", "w")
