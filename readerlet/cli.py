@@ -161,6 +161,17 @@ def kindle_auth():
     """
     Configure authentication with Kindle service on Amazon.
     """
+    credentials_file = "readerlet-kindle-client.json"
+
+    if os.path.exists(credentials_file):
+        override_current = click.confirm(
+            f"A credentials file '{credentials_file}' already exists. Do you want to override it?",
+            default=False,
+        )
+        if not override_current:
+            click.echo("Authentication canceled.")
+            return
+
     auth = stkclient.OAuth2()
     signin_url = auth.get_signin_url()
     click.echo(
