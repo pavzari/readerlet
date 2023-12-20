@@ -45,9 +45,12 @@ def install_npm_packages() -> None:
 
 
 def extract_content(url: str) -> Article:
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    js_script_path = os.path.join(current_dir, "js", "extract_stdout.js")
+
     try:
         readability = subprocess.run(
-            ["node", "js/extract_stdout.js", url],
+            ["node", js_script_path, url],
             capture_output=True,
             text=True,
             check=True,
@@ -161,11 +164,12 @@ def kindle_auth():
     """
     Configure authentication with Kindle service on Amazon.
     """
-    credentials_file = "readerlet-kindle-client.json"
+    config_file = "kindle_config.json"
+    cfg = os.path.join(click.get_app_dir("readerlet"), config_file)
 
-    if os.path.exists(credentials_file):
+    if os.path.exists(cfg):
         override_current = click.confirm(
-            f"A credentials file '{credentials_file}' already exists. Do you want to override it?",
+            f"A credentials file '{cfg}' already exists. Do you want to override it?",
             default=False,
         )
         if not override_current:
@@ -175,19 +179,21 @@ def kindle_auth():
     auth = stkclient.OAuth2()
     signin_url = auth.get_signin_url()
     click.echo(
-        f"Please go to the following URL to sign in and authorize the application with Amazon's Kindle service:\n{signin_url}"
+        f"\nPlease go to the following URL to sign in and authorize the application with Amazon's Kindle service:\n\n{signin_url}"
     )
 
     while True:
         try:
-            redirect_url = input("Paste the redirect URL from the authorization page:")
+            redirect_url = input(
+                "\nPaste the redirect URL from the authorization page:\n"
+            )
             client = auth.create_client(redirect_url)
             click.echo(f"Authentication successful. Client details:\n{client}")
 
-            with open("readerlet-kindle-client.json", "w") as f:
+            with open(cfg, "w") as f:
                 client.dump(f)
 
-            click.echo("Authentication details saved to 'client.json'.")
+            click.echo(f"Authentication details saved to {cfg}.")
         except (EOFError, KeyboardInterrupt):
             break
         except Exception as e:
