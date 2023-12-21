@@ -27,4 +27,4 @@ CI = "https://github.com/pavzari/readerlet/actions"
 readerlet = "readerlet.cli:cli"
 
 [project.optional-dependencies]
-test = ["pytest"]
+test = ["pytest", "pytest-subprocess"]

@@ -29,19 +29,18 @@ def install_npm_packages() -> None:
 
         if not os.path.exists(node_modules_dir):
             click.echo("Installing required npm packages...")
-            with chdir(javascript_dir):
-                try:
-                    subprocess.run(
-                        ["npm", "install"],
-                        capture_output=True,
-                        text=True,
-                        check=True,
-                    )
-                    click.echo("npm install completed successfully.")
-                except subprocess.CalledProcessError:
-                    raise click.ClickException("Error running npm install.")
+            try:
+                subprocess.run(
+                    ["npm", "install"],
+                    cwd=javascript_dir,
+                    capture_output=True,
+                    check=True,
+                )
+                click.echo("Npm install completed successfully.")
+            except subprocess.CalledProcessError:
+                raise click.ClickException("Failed to install npm packages.")
     else:
-        raise click.ClickException("Node.js is not installed.")
+        raise click.ClickException("Node.js runtime not found.")
 
 
 def extract_content(url: str) -> Article:
