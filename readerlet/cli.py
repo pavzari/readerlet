@@ -3,7 +3,6 @@ import click
 import json
 import subprocess
 import stkclient
-from contextlib import chdir
 from readerlet.article import Article
 from urllib.parse import urlparse
 
