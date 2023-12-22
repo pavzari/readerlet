@@ -1,18 +1,20 @@
 import os
-import pytest
-import click
 from unittest.mock import patch
+
+import click
+import pytest
+
 from readerlet.cli import check_node_installed, install_npm_packages
 
 
 def test_check_node_installed_success(fp):
     fp.register_subprocess(["node", "--version"], stdout="v20.5.0")
-    assert check_node_installed() == True
+    assert check_node_installed() is True
 
 
 def test_check_node_installed_failure(fp):
     fp.register_subprocess(["node", "--version"], returncode=1)
-    assert check_node_installed() == False
+    assert check_node_installed() is False
 
 
 def test_install_npm_packages_node_not_installed(fp):
@@ -32,7 +34,7 @@ def test_install_npm_packages_npm_failure(fp):
             install_npm_packages()
 
 
-def test_install_npm_packages_npm_ok(capsys, fp):
+def test_install_npm_packages_npm_ok(fp):
     fp.register_subprocess(["node", "--version"], stdout="v20.5.0")
     fp.register_subprocess(["npm", "install"], returncode=0)
 

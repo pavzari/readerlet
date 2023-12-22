@@ -14,7 +14,6 @@ dependencies = [
     "bs4",
     "requests",
     "stkclient"
-
 ]
 
 [project.urls]
@@ -23,8 +22,11 @@ Changelog = "https://github.com/pavzari/readerlet/releases"
 Issues = "https://github.com/pavzari/readerlet/issues"
 CI = "https://github.com/pavzari/readerlet/actions"
 
+[tool.setuptools.package-data]
+readerlet = ["js/*", "templates/*"]
+
 [project.entry-points.console_scripts]
 readerlet = "readerlet.cli:cli"
 
 [project.optional-dependencies]
-test = ["pytest", "pytest-subprocess"]
+test = ["pytest", "pytest-subprocess", "ruff"]
