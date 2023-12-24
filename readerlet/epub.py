@@ -1,13 +1,14 @@
-import datetime
-import os
-import tempfile
-import uuid
+from datetime import datetime
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from uuid import uuid4
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from jinja2 import Environment, FileSystemLoader
 
 from readerlet.article import Article
 
-container_xml = """
+CONTAINER_XML = """
 <?xml version="1.0"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
   <rootfiles>
@@ -16,34 +17,52 @@ container_xml = """
 </container>"""
 
 
-def create_epub(article: Article) -> None:
+def create_epub(article: Article, output_path: str) -> None:
     env = Environment(loader=FileSystemLoader("templates"), autoescape=True)
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_path = os.path.abspath(temp_dir)
+    # TODO:
+    # check if output_path exists or is it done by click?
 
-        for dirname in ["OEBPS", "META-INF", "OEBPS/images", "OEBPS/css"]:
-            os.makedirs(os.path.join(temp_path, dirname), exist_ok=True)
+    with TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir).resolve()
 
-        with open(os.path.join(temp_path, "mimetype"), "w") as file:
+        for dir_name in ["OEBPS", "META-INF", "OEBPS/images", "OEBPS/css"]:
+            (temp_path / dir_name).mkdir(parents=True, exist_ok=True)
+
+        # TODO:
+        # download images to temp dir, modify the html.
+        # Only if images have not been stripped!
+        article.extract_images(temp_path / "OEBPS/images")
+
+        with (temp_path / "mimetype").open("w") as file:
             file.write("application/epub+zip")
 
-        with open(os.path.join(temp_path, "META-INF", "container.xml"), "w") as file:
-            file.write(container_xml)
+        with (temp_path / "META-INF" / "container.xml").open("w") as file:
+            file.write(CONTAINER_XML)
 
         tmplt = env.get_template("content.xhtml")
-        output = tmplt.render(article=article)
-        with open(os.path.join(temp_path, "OEBPS", "content.xhtml"), "w") as file:
-            file.write(output)
+        content_xhtml = tmplt.render(article=article)
+        with (temp_path / "OEBPS" / "content.xhtml").open("w") as file:
+            file.write(content_xhtml)
 
         tmplt = env.get_template("content.opf")
-        output = tmplt.render(
+        content_opf = tmplt.render(
             article=article,
-            date=datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
-            uuid=uuid.uuid4(),
+            date=datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            uuid=uuid4(),
         )
-        with open(os.path.join(temp_path, "OEBPS", "content.opf"), "w") as file:
-            file.write(output)
+        with (temp_path / "OEBPS" / "content.opf").open("w") as file:
+            file.write(content_opf)
+
+        epub_name = f"{article.title.replace(' ', '_')}.epub"
+
+        with ZipFile(output_path / epub_name, "w", ZIP_DEFLATED) as archive:
+            for file_path in temp_path.rglob("*"):
+                archive.write(file_path, arcname=file_path.relative_to(temp_path))
+
+
+def kindle_send():
+    pass
 
 
 if __name__ == "__main__":

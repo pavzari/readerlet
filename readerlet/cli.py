@@ -7,6 +7,7 @@ import click
 import stkclient
 
 from readerlet.article import Article
+from readerlet.epub import create_epub, kindle_send
 
 
 def check_node_installed() -> bool:
@@ -59,6 +60,7 @@ def extract_content(url: str) -> Article:
 
         if article_data:
             title = article_data.get("title", "No Title")
+            # If no title - use url!
             byline = article_data.get("byline", f"{urlparse(url).netloc}")
             content = article_data.get("content", "")
             text_content = article_data.get("textContent", "")
@@ -138,23 +140,34 @@ def extract(
     """
     install_npm_packages()
     article = extract_content(url)
-    article.extract_images()
 
     article.strip_hyperlinks() if strip_hyperlinks else None
     article.strip_images() if strip_images else None
 
     if output_epub:
-        pass
+        epub_path = create_epub(article, output_epub)
+        # TODO:
+        # create_epub needs to return a path!!
+        click.echo(f"EPUB file created at: {epub_path}")
 
         if send_to_kindle:
-            pass
+            kindle_send(epub_path)
+            click.echo("EPUB sent to Kindle.")
+
+    if send_to_kindle:
+        epub_path = create_epub(article)
+        kindle_send(epub_path)
+        click.echo("EPUB sent to Kindle.")
 
     if output_pdf:
         raise click.ClickException("Not implemented.")
+
     if output_markdown:
         raise click.ClickException("Not implemented.")
+
     if stdout == "html":
         click.echo(article.content)
+
     elif stdout == "text":
         click.echo(article.text_content)
 
@@ -198,8 +211,3 @@ def kindle_auth():
             break
         except Exception as e:
             click.echo(f"Error during authentication: {e}")
-
-
-# # f = open("article.html", "w")
-# # f.write(article.content)
-# # f.close()
