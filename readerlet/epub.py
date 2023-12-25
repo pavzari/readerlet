@@ -17,11 +17,14 @@ CONTAINER_XML = """
 </container>"""
 
 
-def create_epub(article: Article, output_path: str) -> None:
+def create_epub(
+    article: Article, output_path: str, include_images: bool = True
+) -> None:
     env = Environment(loader=FileSystemLoader("templates"), autoescape=True)
 
     # TODO:
     # check if output_path exists or is it done by click?
+    # output path optional. What is default?
 
     with TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir).resolve()
@@ -29,10 +32,8 @@ def create_epub(article: Article, output_path: str) -> None:
         for dir_name in ["OEBPS", "META-INF", "OEBPS/images", "OEBPS/css"]:
             (temp_path / dir_name).mkdir(parents=True, exist_ok=True)
 
-        # TODO:
-        # download images to temp dir, modify the html.
-        # Only if images have not been stripped!
-        article.extract_images(temp_path / "OEBPS/images")
+        if include_images:
+            article.extract_images(temp_path / "OEBPS/images")
 
         with (temp_path / "mimetype").open("w") as file:
             file.write("application/epub+zip")

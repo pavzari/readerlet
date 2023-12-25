@@ -2,15 +2,15 @@
 <package version="3.0" xmlns="http://www.idpf.org/2007/opf" unique-identifier="uuid">
   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
     <dc:identifier id="uuid">{{ uuid }}</dc:identifier>
-    <dc:title>{{ title }}</dc:title>
-    <dc:creator>{{ author }}</dc:creator>
+    <dc:title>{{ article.title }}</dc:title>
+    <dc:creator>{{ article.byline }}</dc:creator>
     <dc:language>{{ lang if lang else 'en' }}</dc:language>
     <meta property="dcterms:modified">{{ date }}</meta>
   </metadata>
   <manifest>
     <item id="content" href="content.xhtml" media-type="application/xhtml+xml"/>
-    {% for image in images %}
-    <item id="id-im{{ image.image_id }}" href="images/{{ image.name }}" media-type="{{ image.name|mediatype }}"/>
+    {% for image in article.images %}
+    <item id="id-image{{ loop.index }}" href="images/{{ image[0] }}" media-type="{{ image[1] }}"/>
     {% endfor %}
     <!--<item id="htmltoc" properties="nav" media-type="application/xhtml+xml" href="toc.xhtml"/>
     <item href="toc.ncx" id="toc" media-type="application/x-dtbncx+xml"/>

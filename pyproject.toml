@@ -13,7 +13,8 @@ dependencies = [
     "click",
     "bs4",
     "requests",
-    "stkclient"
+    "stkclient",
+    "Jinja2",
 ]
 
 [project.urls]

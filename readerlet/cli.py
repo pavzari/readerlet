@@ -59,8 +59,7 @@ def extract_content(url: str) -> Article:
         article_data = json.loads(readability.stdout)
 
         if article_data:
-            title = article_data.get("title", "No Title")
-            # If no title - use url!
+            title = article_data.get("title", f"{urlparse(url).netloc}")
             byline = article_data.get("byline", f"{urlparse(url).netloc}")
             content = article_data.get("content", "")
             text_content = article_data.get("textContent", "")
@@ -142,12 +141,16 @@ def extract(
     article = extract_content(url)
 
     article.strip_hyperlinks() if strip_hyperlinks else None
-    article.strip_images() if strip_images else None
+
+    if strip_images:
+        article.strip_images()
+        include_images = False
 
     if output_epub:
-        epub_path = create_epub(article, output_epub)
+        epub_path = create_epub(article, output_epub, include_images)
         # TODO:
         # create_epub needs to return a path!!
+        # output_path and send_to_kindle?
         click.echo(f"EPUB file created at: {epub_path}")
 
         if send_to_kindle:
@@ -155,7 +158,7 @@ def extract(
             click.echo("EPUB sent to Kindle.")
 
     if send_to_kindle:
-        epub_path = create_epub(article)
+        epub_path = create_epub(article, include_images)
         kindle_send(epub_path)
         click.echo("EPUB sent to Kindle.")
 
