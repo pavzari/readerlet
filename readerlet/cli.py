@@ -78,13 +78,20 @@ def cli():
     pass
 
 
+# TODO:
+# Cli args/options need a rethink!
+# -e is triggered even when not specified.
+
+
 @cli.command()
 @click.argument("url", required=True)
 @click.option(
     "--output-epub",
     "-e",
-    type=click.Path(),
-    help="Output EPUB file to the specified path.",
+    # default=None,
+    # show_default=True,
+    type=click.Path(exists=True, dir_okay=True, resolve_path=True),
+    help="Output EPUB file to the specified dir. If not specified, defaults to the current directory.",
 )
 @click.option(
     "--send-to-kindle",
@@ -118,6 +125,8 @@ def cli():
     type=click.Path(),
     help="Output Markdown file to the specified path.",
 )
+# TODO:
+# remove whitespace
 @click.option(
     "--stdout",
     "-o",
@@ -142,15 +151,14 @@ def extract(
 
     article.strip_hyperlinks() if strip_hyperlinks else None
 
+    include_images = True
+
     if strip_images:
         article.strip_images()
         include_images = False
 
     if output_epub:
         epub_path = create_epub(article, output_epub, include_images)
-        # TODO:
-        # create_epub needs to return a path!!
-        # output_path and send_to_kindle?
         click.echo(f"EPUB file created at: {epub_path}")
 
         if send_to_kindle:

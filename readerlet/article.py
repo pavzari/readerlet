@@ -48,18 +48,19 @@ class Article:
         """Check image extension and return mimetype."""
         ext = name.split(".")[-1].lower()
 
-        extension_to_mimetype = {
+        ext_mimetype = {
             "png": "image/png",
             "jpg": "image/jpeg",
             "jpeg": "image/jpeg",
             "gif": "image/gif",
             "svg": "image/svg+xml",
         }
+        # TODO:
         # Unsupported on Kindle:
         # "webp": "image/webp"
 
-        if ext in extension_to_mimetype:
-            return extension_to_mimetype[ext]
+        if ext in ext_mimetype:
+            return ext_mimetype[ext]
         else:
             raise ValueError(f"Image format {ext} is not supported.")
 
@@ -80,11 +81,11 @@ class Article:
                         continue
                     # TODO:
                     # html rendering issues if image name contains %!
-                    img_tag["src"] = str(image_path)
+                    img_tag["src"] = str(f"images/{Path(image_path).name}")
                     image_name = Path(image_path).name
-                    self.images.append(tuple(image_name, mimetype))
+                    self.images.append((image_name, mimetype))
                     click.echo(
-                        f"Downloaded and replaced: {absolute_url} -> {image_path}"
+                        f"Downloaded and replaced: {absolute_url} -> images/{Path(image_path).name}"
                     )
                 else:
                     img_tag.decompose()

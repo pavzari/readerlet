@@ -17,14 +17,10 @@ CONTAINER_XML = """
 </container>"""
 
 
-def create_epub(
-    article: Article, output_path: str, include_images: bool = True
-) -> None:
-    env = Environment(loader=FileSystemLoader("templates"), autoescape=True)
-
-    # TODO:
-    # check if output_path exists or is it done by click?
-    # output path optional. What is default?
+def create_epub(article: Article, output_path: str, include_images: bool) -> None:
+    env = Environment(
+        loader=FileSystemLoader(Path(__file__).parent / "templates"), autoescape=False
+    )
 
     with TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir).resolve()
@@ -55,28 +51,14 @@ def create_epub(
         with (temp_path / "OEBPS" / "content.opf").open("w") as file:
             file.write(content_opf)
 
-        epub_name = f"{article.title.replace(' ', '_')}.epub"
+        epub_name = f"{article.title.replace(' ', '-')}.epub"
 
-        with ZipFile(output_path / epub_name, "w", ZIP_DEFLATED) as archive:
+        with ZipFile(Path(output_path) / epub_name, "w", ZIP_DEFLATED) as archive:
             for file_path in temp_path.rglob("*"):
                 archive.write(file_path, arcname=file_path.relative_to(temp_path))
+
+        return str(Path(output_path) / epub_name)
 
 
 def kindle_send():
     pass
-
-
-if __name__ == "__main__":
-    create_epub()
-
-"""
-Epub to disk - pass path from cli()?
-All images in Article need a mimetype.
-
-1. Temp dir.
-2. Create a dir structure.
-3. Write files that don't change.
-4. Jinja populate templates.
-5. Images (where and when to invoke the dowload function?)
-6. Make a zip and save to disk.    
-"""
