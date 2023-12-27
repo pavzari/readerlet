@@ -16,10 +16,6 @@ For help, run:
 
     readerlet --help
 
-You can also use:
-
-    python -m readerlet --help
-
 ## Development
 
 First checkout the code. Then create a new virtual environment:
@@ -28,7 +24,7 @@ First checkout the code. Then create a new virtual environment:
     python -m venv venv
     source venv/bin/activate
 
-Install the dependencies and test dependencies:
+Install the dependencies and dev/test dependencies:
 
     pip install -e '.[test]'
 

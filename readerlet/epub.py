@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -17,7 +18,7 @@ CONTAINER_XML = """
 </container>"""
 
 
-def create_epub(article: Article, output_path: str, include_images: bool) -> None:
+def create_epub(article: Article, output_path: str, remove_images: bool) -> Path:
     env = Environment(
         loader=FileSystemLoader(Path(__file__).parent / "templates"), autoescape=False
     )
@@ -28,7 +29,7 @@ def create_epub(article: Article, output_path: str, include_images: bool) -> Non
         for dir_name in ["OEBPS", "META-INF", "OEBPS/images", "OEBPS/css"]:
             (temp_path / dir_name).mkdir(parents=True, exist_ok=True)
 
-        if include_images:
+        if not remove_images:
             article.extract_images(temp_path / "OEBPS/images")
 
         with (temp_path / "mimetype").open("w") as file:
@@ -51,14 +52,17 @@ def create_epub(article: Article, output_path: str, include_images: bool) -> Non
         with (temp_path / "OEBPS" / "content.opf").open("w") as file:
             file.write(content_opf)
 
-        epub_name = f"{article.title.replace(' ', '-')}.epub"
+        # TODO: + byline?
+        epub_name = f"{clean_title(article.title)}.epub"
 
         with ZipFile(Path(output_path) / epub_name, "w", ZIP_DEFLATED) as archive:
             for file_path in temp_path.rglob("*"):
                 archive.write(file_path, arcname=file_path.relative_to(temp_path))
 
-        return str(Path(output_path) / epub_name)
+    return Path(output_path) / epub_name
 
 
-def kindle_send():
-    pass
+def clean_title(title: str) -> str:
+    cleaned_title = re.sub(r"[^a-zA-Z ]+", "", title)
+    cleaned_title = re.sub(r"\s+", "-", cleaned_title)
+    return cleaned_title

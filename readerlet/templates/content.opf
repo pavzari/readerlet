@@ -4,7 +4,7 @@
     <dc:identifier id="uuid">{{ uuid }}</dc:identifier>
     <dc:title>{{ article.title }}</dc:title>
     <dc:creator>{{ article.byline }}</dc:creator>
-    <dc:language>{{ lang if lang else 'en' }}</dc:language>
+    <dc:language>{{ article.lang | default('en') }}</dc:language>
     <meta property="dcterms:modified">{{ date }}</meta>
   </metadata>
   <manifest>
@@ -12,10 +12,11 @@
     {% for image in article.images %}
     <item id="id-image{{ loop.index }}" href="images/{{ image[0] }}" media-type="{{ image[1] }}"/>
     {% endfor %}
-    <!--<item id="htmltoc" properties="nav" media-type="application/xhtml+xml" href="toc.xhtml"/>
+    <!--
+    <item id="htmltoc" properties="nav" media-type="application/xhtml+xml" href="toc.xhtml"/>
     <item href="toc.ncx" id="toc" media-type="application/x-dtbncx+xml"/>
     <item media-type="text/css" id="css" href="css/stylesheet.css"/>
-    Add any images, css, fonts or other resources here -->
+    -->
   </manifest>
   <spine>
     <itemref idref="content"/>

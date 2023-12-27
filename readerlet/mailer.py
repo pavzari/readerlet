@@ -15,7 +15,6 @@ class Mailer:
         self.smtp_port = smtp_port
         self.kindle_email = kindle_email
         # self.email_subject = email_subject
-        # self.attachment_path = attachment_path
 
     def send_attachment(self, attachment_path):
         email = MIMEMultipart()
@@ -44,4 +43,3 @@ class Mailer:
             print("Email sent successfully!")
         except smtplib.SMTPException as e:
             print("Error whilst sending email", e)
-            # raise SystemExit(e)

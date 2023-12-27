@@ -1,17 +1,19 @@
 import json
 import os
 import subprocess
+from pathlib import Path
 from urllib.parse import urlparse
 
 import click
 import stkclient
+from bs4 import BeautifulSoup
+from stkclient.api import APIError
 
 from readerlet.article import Article
-from readerlet.epub import create_epub, kindle_send
+from readerlet.epub import create_epub
 
 
 def check_node_installed() -> bool:
-    # node version constraints?
     try:
         subprocess.run(
             ["node", "--version"],
@@ -61,9 +63,11 @@ def extract_content(url: str) -> Article:
         if article_data:
             title = article_data.get("title", f"{urlparse(url).netloc}")
             byline = article_data.get("byline", f"{urlparse(url).netloc}")
+            lang = article_data.get("lang", "")
             content = article_data.get("content", "")
             text_content = article_data.get("textContent", "")
-            return Article(url, title, byline, content, text_content)
+            return Article(url, title, byline, lang, content, text_content)
+            # TODO: raise if no content extracted?
 
     except subprocess.CalledProcessError:
         raise click.ClickException("Error extracting article.")
@@ -78,132 +82,122 @@ def cli():
     pass
 
 
-# TODO:
-# Cli args/options need a rethink!
-# -e is triggered even when not specified.
-
-
 @cli.command()
-@click.argument("url", required=True)
+@click.argument("url", required=True, type=str)
 @click.option(
-    "--output-epub",
-    "-e",
-    # default=None,
-    # show_default=True,
-    type=click.Path(exists=True, dir_okay=True, resolve_path=True),
-    help="Output EPUB file to the specified dir. If not specified, defaults to the current directory.",
-)
-@click.option(
-    "--send-to-kindle",
-    "-k",
-    is_flag=True,
-    help="Send EPUB to Kindle if outputting to EPUB.",
-)
-@click.option(
-    "--strip-hyperlinks",
-    "-s",
+    "--remove-hyperlinks",
+    "-h",
     is_flag=True,
     default=False,
     help="Remove hyperlinks from the content.",
 )
 @click.option(
-    "--strip-images",
+    "--remove-images",
     "-i",
     is_flag=True,
     default=False,
-    help="Remove images from the content.",
+    help="Remove image-related elements from the content",
+)
+def send(url: str, remove_hyperlinks: bool, remove_images: bool) -> None:
+    """Send web content to Kindle."""
+
+    install_npm_packages()
+    article = extract_content(url)
+
+    if remove_hyperlinks:
+        article.remove_hyperlinks()
+
+    if remove_images:
+        article.remove_images()
+
+    try:
+        click.echo("Creating EPUB...")
+        epub_path = create_epub(
+            article, str(Path(__file__).parent.resolve()), remove_images
+        )
+        click.echo("Sending to Kindle...")
+        kindle_send(epub_path, article.byline, article.title)
+        click.secho("EPUB sent to Kindle.", fg="green")
+    finally:
+        if epub_path.exists():
+            epub_path.unlink()
+
+
+@cli.command()
+@click.argument("url", required=True, type=str)
+@click.option(
+    "--output-epub",
+    "-e",
+    type=click.Path(exists=True, dir_okay=True, resolve_path=True),
+    help="Save EPUB to disk. Output directory for the EPUB file.",
 )
 @click.option(
-    "--output-pdf",
-    "-p",
-    type=click.Path(),
-    help="Output PDF file to the specified path.",
+    "--remove-hyperlinks",
+    "-h",
+    is_flag=True,
+    default=False,
+    help="Remove hyperlinks from the content.",
 )
 @click.option(
-    "--output-markdown",
-    "-m",
-    type=click.Path(),
-    help="Output Markdown file to the specified path.",
+    "--remove-images",
+    "-i",
+    is_flag=True,
+    default=False,
+    help="Remove image-related elements from the content.",
 )
-# TODO:
-# remove whitespace
 @click.option(
     "--stdout",
     "-o",
     type=click.Choice(["html", "text"]),
-    help="Specify the output format (html or text without html). If used, content will be printed to stdout.",
+    help="Print content to stdout. Specify the output format (html or text without html).",
 )
 def extract(
-    url,
-    output_epub,
-    send_to_kindle,
-    strip_hyperlinks,
-    strip_images,
-    output_pdf,
-    output_markdown,
-    stdout,
-):
-    """
-    Extract and format a web content.
-    """
+    url: str,
+    output_epub: str,
+    remove_hyperlinks: bool,
+    remove_images: bool,
+    stdout: bool,
+) -> None:
+    """Extract and format a web content, save as EPUB or print to stdout."""
+
     install_npm_packages()
     article = extract_content(url)
 
-    article.strip_hyperlinks() if strip_hyperlinks else None
+    if remove_hyperlinks:
+        article.remove_hyperlinks()
 
-    include_images = True
-
-    if strip_images:
-        article.strip_images()
-        include_images = False
+    if remove_images:
+        article.remove_images()
 
     if output_epub:
-        epub_path = create_epub(article, output_epub, include_images)
-        click.echo(f"EPUB file created at: {epub_path}")
-
-        if send_to_kindle:
-            kindle_send(epub_path)
-            click.echo("EPUB sent to Kindle.")
-
-    if send_to_kindle:
-        epub_path = create_epub(article, include_images)
-        kindle_send(epub_path)
-        click.echo("EPUB sent to Kindle.")
-
-    if output_pdf:
-        raise click.ClickException("Not implemented.")
-
-    if output_markdown:
-        raise click.ClickException("Not implemented.")
+        click.echo("Creating EPUB file...")
+        epub_path = create_epub(article, output_epub, remove_images)
+        click.secho(f"EPUB file created at: {epub_path}", fg="green")
 
     if stdout == "html":
-        click.echo(article.content)
+        c = BeautifulSoup(article.content, "html.parser")
+        click.echo(str(c))
 
+    # TODO:
+    # newlines and whitespace.
+    # add title.
     elif stdout == "text":
         click.echo(article.text_content)
 
 
 @cli.command()
-def kindle_auth():
-    """
-    Configure authentication with Kindle service on Amazon.
-    """
-    config_file = "kindle_config.json"
-    cfg = os.path.join(click.get_app_dir("readerlet"), config_file)
+def kindle_login() -> None:
+    """Configure OAuth2 authentication with Amazon's Send-to-Kindle service."""
 
-    if os.path.exists(cfg):
-        override_current = click.confirm(
-            f"A credentials file '{cfg}' already exists. Do you want to override it?",
-            default=False,
-        )
-        if not override_current:
-            click.echo("Authentication canceled.")
-            return
+    config_file = "kindle_config.json"
+    config_dir = Path(click.get_app_dir("readerlet"))
+    config_dir.mkdir(parents=True, exist_ok=True)
+    cfg = config_dir / config_file
 
     auth = stkclient.OAuth2()
     signin_url = auth.get_signin_url()
     click.echo(
-        f"\nPlease go to the following URL to sign in and authorize the application with Amazon's Kindle service:\n\n{signin_url}"
+        f"\nSign in and authorize the application with Amazon's Send-to-Kindle service:\n\n{signin_url}"
     )
 
     while True:
@@ -212,13 +206,42 @@ def kindle_auth():
                 "\nPaste the redirect URL from the authorization page:\n"
             )
             client = auth.create_client(redirect_url)
-            click.echo(f"Authentication successful. Client details:\n{client}")
-
             with open(cfg, "w") as f:
                 client.dump(f)
-
-            click.echo(f"Authentication details saved to {cfg}.")
+            click.secho("Authentication successful.", fg="green")
+            click.echo(f"Authentication details saved to: {cfg}.")
+            break
         except (EOFError, KeyboardInterrupt):
             break
         except Exception as e:
             click.echo(f"Error during authentication: {e}")
+            break
+
+
+def kindle_send(filepath: Path, author: str, title: str, format: str = "EPUB") -> None:
+    """Send to Kindle device."""
+
+    config_file = "kindle_config.json"
+    cfg = Path(click.get_app_dir("readerlet"), config_file)
+
+    if not cfg.exists():
+        raise click.ClickException(
+            "Kindle configuration file not found. Authenticate your Kindle device with 'readerlet kindle-login'."
+        )
+    try:
+        with open(cfg) as f:
+            client = stkclient.Client.load(f)
+        devices = client.get_owned_devices()
+        destinations = [d.device_serial_number for d in devices]
+        client.send_file(
+            filepath, destinations, author=author, title=title, format=format
+        )
+    except APIError:
+        # token expiration?
+        raise click.ClickException(
+            "Authenticate your Kindle device with 'readerlet kindle-login'."
+        )
+    except json.JSONDecodeError:
+        raise click.ClickException(f"Error: File '{cfg}' is not a valid JSON file.")
+    except Exception as e:
+        raise click.ClickException(f"An unexpected error occurred: {e}")
