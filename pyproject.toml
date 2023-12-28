@@ -31,3 +31,4 @@ readerlet = "readerlet.cli:cli"
 
 [project.optional-dependencies]
 test = ["pytest", "pytest-subprocess", "ruff"]
+node = ["nodejs-bin[cmd]"]

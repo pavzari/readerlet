@@ -32,7 +32,7 @@ def install_npm_packages() -> None:
         node_modules_dir = os.path.join(javascript_dir, "node_modules")
 
         if not os.path.exists(node_modules_dir):
-            click.echo("Installing required npm packages...")
+            click.echo("Installing npm packages...")
             try:
                 subprocess.run(
                     ["npm", "install"],
@@ -40,7 +40,7 @@ def install_npm_packages() -> None:
                     capture_output=True,
                     check=True,
                 )
-                click.echo("Npm install completed successfully.")
+                click.echo("Npm install completed.")
             except subprocess.CalledProcessError:
                 raise click.ClickException("Failed to install npm packages.")
     else:
@@ -66,9 +66,9 @@ def extract_content(url: str) -> Article:
             lang = article_data.get("lang", "")
             content = article_data.get("content", "")
             text_content = article_data.get("textContent", "")
+            if not content:
+                raise click.ClickException("Content not extracted.")
             return Article(url, title, byline, lang, content, text_content)
-            # TODO: raise if no content extracted?
-
     except subprocess.CalledProcessError:
         raise click.ClickException("Error extracting article.")
 
@@ -89,17 +89,17 @@ def cli():
     "-h",
     is_flag=True,
     default=False,
-    help="Remove hyperlinks from the content.",
+    help="Remove hyperlinks from content.",
 )
 @click.option(
     "--remove-images",
     "-i",
     is_flag=True,
     default=False,
-    help="Remove image-related elements from the content",
+    help="Remove image-related elements from content.",
 )
 def send(url: str, remove_hyperlinks: bool, remove_images: bool) -> None:
-    """Send web content to Kindle."""
+    """Extract web content as EPUB and send to Kindle."""
 
     install_npm_packages()
     article = extract_content(url)
@@ -117,7 +117,7 @@ def send(url: str, remove_hyperlinks: bool, remove_images: bool) -> None:
         )
         click.echo("Sending to Kindle...")
         kindle_send(epub_path, article.byline, article.title)
-        click.secho("EPUB sent to Kindle.", fg="green")
+        click.secho("EPUB sent.", fg="green")
     finally:
         if epub_path.exists():
             epub_path.unlink()
@@ -136,14 +136,14 @@ def send(url: str, remove_hyperlinks: bool, remove_images: bool) -> None:
     "-h",
     is_flag=True,
     default=False,
-    help="Remove hyperlinks from the content.",
+    help="Remove hyperlinks from content.",
 )
 @click.option(
     "--remove-images",
     "-i",
     is_flag=True,
     default=False,
-    help="Remove image-related elements from the content.",
+    help="Remove image-related elements from content.",
 )
 @click.option(
     "--stdout",
@@ -170,9 +170,9 @@ def extract(
         article.remove_images()
 
     if output_epub:
-        click.echo("Creating EPUB file...")
+        click.echo("Creating EPUB...")
         epub_path = create_epub(article, output_epub, remove_images)
-        click.secho(f"EPUB file created at: {epub_path}", fg="green")
+        click.secho(f"EPUB file created: {epub_path}", fg="green")
 
     if stdout == "html":
         c = BeautifulSoup(article.content, "html.parser")
@@ -219,14 +219,14 @@ def kindle_login() -> None:
 
 
 def kindle_send(filepath: Path, author: str, title: str, format: str = "EPUB") -> None:
-    """Send to Kindle device."""
+    """Send EPUB to Kindle."""
 
     config_file = "kindle_config.json"
     cfg = Path(click.get_app_dir("readerlet"), config_file)
 
     if not cfg.exists():
         raise click.ClickException(
-            "Kindle configuration file not found. Authenticate your Kindle device with 'readerlet kindle-login'."
+            "Kindle configuration file not found. Use 'readerlet kindle-login'."
         )
     try:
         with open(cfg) as f:
@@ -238,10 +238,8 @@ def kindle_send(filepath: Path, author: str, title: str, format: str = "EPUB") -
         )
     except APIError:
         # token expiration?
-        raise click.ClickException(
-            "Authenticate your Kindle device with 'readerlet kindle-login'."
-        )
+        raise click.ClickException("Authenticate error. Use 'readerlet kindle-login'.")
     except json.JSONDecodeError:
         raise click.ClickException(f"Error: File '{cfg}' is not a valid JSON file.")
     except Exception as e:
-        raise click.ClickException(f"An unexpected error occurred: {e}")
+        raise click.ClickException(f"Error: {e}")

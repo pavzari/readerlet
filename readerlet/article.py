@@ -8,7 +8,15 @@ from bs4 import BeautifulSoup
 
 
 class Article:
-    def __init__(self, url, title, byline, lang, content, text_content):
+    def __init__(
+        self,
+        url: str,
+        title: str,
+        byline: str,
+        lang: str,
+        content: str,
+        text_content: str,
+    ):
         self.url = url
         self.title = title
         self.byline = byline
@@ -18,8 +26,7 @@ class Article:
         self.images = []
 
     def remove_hyperlinks(self) -> None:
-        """Strip <a> tag attributes but keep the tags and content."""
-
+        """Strip <a> tag attributes - keep the tags and content."""
         soup = BeautifulSoup(self.content, "html.parser")
         for a in soup.find_all("a"):
             for attrb in list(a.attrs.keys()):
@@ -27,8 +34,7 @@ class Article:
         self.content = str(soup)
 
     def remove_images(self) -> None:
-        """Strip all image-related elements from the content."""
-
+        """Strip all image-related elements from content."""
         tags_to_remove = ["img", "figure", "picture"]
         soup = BeautifulSoup(self.content, "html.parser")
         for tag in soup.find_all(tags_to_remove):
@@ -49,9 +55,7 @@ class Article:
     @staticmethod
     def check_mediatype(name: str) -> str:
         """Check image extension and return mimetype."""
-
         ext = name.split(".")[-1].lower()
-
         ext_mimetype = {
             "png": "image/png",
             "jpg": "image/jpeg",
@@ -69,10 +73,8 @@ class Article:
             raise ValueError(f"Image format {ext} is not supported.")
 
     def extract_images(self, temp_dir: Path) -> None:
-        """Download images and replace src with a local path."""
-
+        """Download images and replace src with local path."""
         soup = BeautifulSoup(self.content, "html.parser")
-
         for img_tag in soup.find_all("img"):
             src = img_tag.get("src")
             if src:
@@ -89,9 +91,7 @@ class Article:
                     img_tag["src"] = str(f"images/{Path(image_path).name}")
                     image_name = Path(image_path).name
                     self.images.append((image_name, mimetype))
-                    click.echo(
-                        f"Downloaded and replaced: {absolute_url} -> images/{Path(image_path).name}"
-                    )
+                    click.echo(f"Downloaded: images/{Path(image_path).name}")
                 else:
                     img_tag.decompose()
                     click.echo(f"Failed to download image: {absolute_url}")
