@@ -3,7 +3,7 @@
 
 A CLI utility for extracting readable content from web pages. Converts web articles to clean HTML or plain text using the [mozilla/readability](https://github.com/mozilla/readability) library. Extracted content can be packaged into EPUB or printed to stdout.
 
-The application includes Send-to-Kindle integration via the [stkclient](https://github.com/maxdjohnson/stkclient), allowing sending created EPUB articles directly to your Kindle device for offline reading.
+Includes Send-to-Kindle integration via the [stkclient](https://github.com/maxdjohnson/stkclient), allowing sending created EPUB articles directly to your Kindle device for offline reading.
 
 ## Installation
 

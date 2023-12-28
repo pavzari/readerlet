@@ -41,4 +41,4 @@ def test_install_npm_packages_npm_ok(fp):
     with patch.object(os.path, "exists", return_value=False):
         with patch("click.echo") as mock_echo:
             install_npm_packages()
-            mock_echo.assert_called_with("Npm install completed successfully.")
+            mock_echo.assert_called_with("Npm install completed.")

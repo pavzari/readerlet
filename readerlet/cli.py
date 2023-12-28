@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 from urllib.parse import urlparse
@@ -65,7 +66,8 @@ def extract_content(url: str) -> Article:
             byline = article_data.get("byline", f"{urlparse(url).netloc}")
             lang = article_data.get("lang", "")
             content = article_data.get("content", "")
-            text_content = article_data.get("textContent", "")
+            text_content = re.sub(r"\s+", " ", article_data.get("textContent", ""))
+            # TODO: date
             if not content:
                 raise click.ClickException("Content not extracted.")
             return Article(url, title, byline, lang, content, text_content)
@@ -100,6 +102,10 @@ def cli():
 )
 def send(url: str, remove_hyperlinks: bool, remove_images: bool) -> None:
     """Extract web content as EPUB and send to Kindle."""
+
+    # TODO:
+    # send an existing file on disk.
+    # send using smtp client.
 
     install_npm_packages()
     article = extract_content(url)
@@ -178,9 +184,6 @@ def extract(
         c = BeautifulSoup(article.content, "html.parser")
         click.echo(str(c))
 
-    # TODO:
-    # newlines and whitespace.
-    # add title.
     elif stdout == "text":
         click.echo(article.text_content)
 
@@ -197,7 +200,7 @@ def kindle_login() -> None:
     auth = stkclient.OAuth2()
     signin_url = auth.get_signin_url()
     click.echo(
-        f"\nSign in and authorize the application with Amazon's Send-to-Kindle service:\n\n{signin_url}"
+        f"\nSign in to authorize the application with Amazon's Send-to-Kindle service:\n\n{signin_url}"
     )
 
     while True:
@@ -209,7 +212,7 @@ def kindle_login() -> None:
             with open(cfg, "w") as f:
                 client.dump(f)
             click.secho("Authentication successful.", fg="green")
-            click.echo(f"Authentication details saved to: {cfg}.")
+            click.echo(f"Credentials saved to: {cfg}.")
             break
         except (EOFError, KeyboardInterrupt):
             break
@@ -219,7 +222,7 @@ def kindle_login() -> None:
 
 
 def kindle_send(filepath: Path, author: str, title: str, format: str = "EPUB") -> None:
-    """Send EPUB to Kindle."""
+    """Send EPUB to Kindle via the Sent to Kindle service."""
 
     config_file = "kindle_config.json"
     cfg = Path(click.get_app_dir("readerlet"), config_file)
@@ -238,7 +241,9 @@ def kindle_send(filepath: Path, author: str, title: str, format: str = "EPUB") -
         )
     except APIError:
         # token expiration?
-        raise click.ClickException("Authenticate error. Use 'readerlet kindle-login'.")
+        raise click.ClickException(
+            "Authentication error. Use 'readerlet kindle-login'."
+        )
     except json.JSONDecodeError:
         raise click.ClickException(f"Error: File '{cfg}' is not a valid JSON file.")
     except Exception as e:

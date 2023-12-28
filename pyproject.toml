@@ -1,7 +1,7 @@
 [project]
 name = "readerlet"
 version = "0.1"
-description = "A command-line utility for extracting and packaging web content for offline reading"
+description = "A command-line utility for extracting and packaging web content for offline reading."
 readme = "README.md"
 authors = [{name = "pavzari"}]
 license = {text = "Apache-2.0"}
