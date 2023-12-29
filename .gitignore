@@ -10,6 +10,5 @@ notes.md
 test-epub
 node_modules/
 package-lock.json
-article.html
-images/
 ruff.toml
+.coverage

@@ -1,6 +1,5 @@
 import subprocess
 from unittest.mock import patch
-from pathlib import Path
 
 import click
 import pytest
