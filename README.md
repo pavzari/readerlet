@@ -32,6 +32,7 @@ The `readerlet send` packages content as EPUB file and sends it to your Kindle. 
 The `extract` command extracts content from URL and outputs an EPUB file to specified directory if used with `-e` flag:
 
     readerlet extract <url> -e <output-dir>
+    readerlet extract https://example.com -e .
 
 To print the extracted content to stdout as html or just text:
 

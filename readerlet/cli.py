@@ -125,8 +125,7 @@ def send(url: str, remove_hyperlinks: bool, remove_images: bool) -> None:
         kindle_send(epub_path, article.byline, article.title)
         click.secho("EPUB sent.", fg="green")
     finally:
-        if epub_path.exists():
-            epub_path.unlink()
+        epub_path.unlink(missing_ok=True)
 
 
 @cli.command()
@@ -222,7 +221,7 @@ def kindle_login() -> None:
 
 
 def kindle_send(filepath: Path, author: str, title: str, format: str = "EPUB") -> None:
-    """Send EPUB to Kindle via the Sent to Kindle service."""
+    """Send EPUB to Kindle via the send to kindle service."""
 
     config_file = "kindle_config.json"
     cfg = Path(click.get_app_dir("readerlet"), config_file)
@@ -241,10 +240,8 @@ def kindle_send(filepath: Path, author: str, title: str, format: str = "EPUB") -
         )
     except APIError:
         # token expiration?
-        raise click.ClickException(
-            "Authentication error. Use 'readerlet kindle-login'."
-        )
+        raise click.ClickException("Authenticate with 'readerlet kindle-login'.")
     except json.JSONDecodeError:
-        raise click.ClickException(f"Error: File '{cfg}' is not a valid JSON file.")
+        raise click.ClickException(f"File '{cfg}' is not a valid JSON file.")
     except Exception as e:
-        raise click.ClickException(f"Error: {e}")
+        raise click.ClickException(f"{e}")

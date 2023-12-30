@@ -63,6 +63,7 @@ def create_epub(article: Article, output_path: str, remove_images: bool) -> Path
 
 
 def clean_title(title: str) -> str:
-    cleaned_title = re.sub(r"[^a-zA-Z ]+", "", title)
-    cleaned_title = re.sub(r"\s+", "-", cleaned_title)
+    cleaned_title = re.sub(r"[^a-zA-Z\s\-\u2014]", "", title)
+    cleaned_title = re.sub(r"[-\s\u2014]+", "-", cleaned_title)
+    cleaned_title = cleaned_title.strip("-")
     return cleaned_title

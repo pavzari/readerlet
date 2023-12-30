@@ -70,7 +70,7 @@ class Article:
         if ext in ext_mimetype:
             return ext_mimetype[ext]
         else:
-            raise ValueError(f"Image format {ext} is not supported.")
+            raise ValueError(f"Image format {ext} is not supported on kindle.")
 
     def extract_images(self, temp_dir: Path) -> None:
         """Download images and replace src with local path."""
@@ -84,7 +84,8 @@ class Article:
                     try:
                         mimetype = self.check_mediatype(Path(image_path).name)
                     except ValueError as e:
-                        click.echo(f"{e}. Skipping {absolute_url}")
+                        # TODO: decompose not supported image tag?
+                        click.echo(f"{e}. {absolute_url}")
                         continue
                     # TODO:
                     # html rendering issues if image name contains %!

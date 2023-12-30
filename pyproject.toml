@@ -1,6 +1,6 @@
 [project]
 name = "readerlet"
-version = "0.1"
+version = "0.1.4"
 description = "A command-line utility for extracting and packaging web content for offline reading."
 readme = "README.md"
 authors = [{name = "pavzari"}]
@@ -11,7 +11,7 @@ classifiers = [
 ]
 dependencies = [
     "click",
-    "bs4",
+    "beautifulsoup4",
     "requests",
     "stkclient",
     "Jinja2",
@@ -24,7 +24,7 @@ Issues = "https://github.com/pavzari/readerlet/issues"
 CI = "https://github.com/pavzari/readerlet/actions"
 
 [tool.setuptools.package-data]
-readerlet = ["js/*", "templates/*"]
+readerlet = ["js/*","templates/*"]
 
 [project.entry-points.console_scripts]
 readerlet = "readerlet.cli:cli"
