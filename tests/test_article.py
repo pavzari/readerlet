@@ -77,9 +77,11 @@ def test_extract_images(article, tmp_path):
         assert "images/test-image.jpg" in article.content
 
 
-def test_download_image_fails_img_src_removed(article, tmp_path):
-    with patch("requests.get") as mock_get:
-        mock_get.return_value.status_code = 400
+def test_download_image_fails_img_tag_decomposed(article, tmp_path):
+    with patch.object(article, "download_image") as mock_download:
+        mock_download.return_value = None
         article.extract_images(tmp_path)
         assert len(article.images) == 0
-        assert "src" not in article.content
+        soup = BeautifulSoup(article.content, "html.parser")
+        img_tags = soup.find_all("img")
+        assert len(img_tags) == 0

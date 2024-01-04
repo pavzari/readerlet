@@ -12,10 +12,10 @@
     {% for image in article.images %}
     <item id="id-image{{ loop.index }}" href="images/{{ image[0] }}" media-type="{{ image[1] }}"/>
     {% endfor %}
+    <item media-type="text/css" id="css" href="css/stylesheet.css"/>
     <!--
     <item id="htmltoc" properties="nav" media-type="application/xhtml+xml" href="toc.xhtml"/>
     <item href="toc.ncx" id="toc" media-type="application/x-dtbncx+xml"/>
-    <item media-type="text/css" id="css" href="css/stylesheet.css"/>
     -->
   </manifest>
   <spine>

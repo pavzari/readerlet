@@ -62,10 +62,18 @@ def extract_content(url: str) -> Article:
         article_data = json.loads(readability.stdout)
 
         if article_data:
-            title = article_data.get("title", f"{urlparse(url).netloc}")
-            byline = article_data.get("byline", f"{urlparse(url).netloc}")
-            lang = article_data.get("lang", "")
-            content = article_data.get("content", "")
+            title = (
+                article_data["title"]
+                if article_data["title"] is not None
+                else urlparse(url).netloc
+            )
+            byline = (
+                article_data["byline"]
+                if article_data["byline"] is not None
+                else urlparse(url).netloc
+            )
+            lang = article_data.get("lang")
+            content = article_data.get("content")
             text_content = re.sub(r"\s+", " ", article_data.get("textContent", ""))
             # TODO: date
             if not content:

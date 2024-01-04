@@ -25,7 +25,7 @@ class Mailer:
         self.kindle_email = kindle_email
         # self.email_subject = email_subject
 
-    def send_attachment(self, attachment_path: Path):
+    def send_attachment(self, attachment_path: Path) -> None:
         email = MIMEMultipart()
         email["From"] = self.sender_email
         email["To"] = self.kindle_email

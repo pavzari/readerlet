@@ -1,4 +1,5 @@
 import re
+import shutil
 from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -8,14 +9,6 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from jinja2 import Environment, FileSystemLoader
 
 from readerlet.article import Article
-
-CONTAINER_XML = """
-<?xml version="1.0"?>
-<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
-  <rootfiles>
-    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
-  </rootfiles>
-</container>"""
 
 
 def create_epub(article: Article, output_path: str, remove_images: bool) -> Path:
@@ -35,8 +28,15 @@ def create_epub(article: Article, output_path: str, remove_images: bool) -> Path
         with (temp_path / "mimetype").open("w") as file:
             file.write("application/epub+zip")
 
-        with (temp_path / "META-INF" / "container.xml").open("w") as file:
-            file.write(CONTAINER_XML)
+        shutil.copy(
+            Path(__file__).parent / "templates" / "container.xml",
+            temp_path / "META-INF" / "container.xml",
+        )
+
+        shutil.copy(
+            Path(__file__).parent / "templates" / "stylesheet.css",
+            temp_path / "OEBPS/css" / "stylesheet.css",
+        )
 
         tmplt = env.get_template("content.xhtml")
         content_xhtml = tmplt.render(article=article)
@@ -52,7 +52,6 @@ def create_epub(article: Article, output_path: str, remove_images: bool) -> Path
         with (temp_path / "OEBPS" / "content.opf").open("w") as file:
             file.write(content_opf)
 
-        # TODO: + byline?
         epub_name = f"{clean_title(article.title)}.epub"
 
         with ZipFile(Path(output_path) / epub_name, "w", ZIP_DEFLATED) as archive:

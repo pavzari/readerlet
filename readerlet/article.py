@@ -43,14 +43,17 @@ class Article:
 
     @staticmethod
     def download_image(url: str, temp_dir: Path) -> Union[Path, None]:
-        response = requests.get(url, stream=True, timeout=10)
-        if response.status_code == 200:
+        try:
+            response = requests.get(url, stream=True, timeout=10)
+            response.raise_for_status()
             filename = temp_dir / Path(urlparse(url).path).name
             with open(filename, "wb") as file:
                 for chunk in response.iter_content(1024):
                     file.write(chunk)
             return filename
-        return None
+        except requests.exceptions.RequestException as e:
+            click.echo(f"Failed to download image: {e}")
+            return None
 
     @staticmethod
     def check_mediatype(name: str) -> str:
@@ -84,8 +87,8 @@ class Article:
                     try:
                         mimetype = self.check_mediatype(Path(image_path).name)
                     except ValueError as e:
-                        # TODO: decompose not supported image tag?
-                        click.echo(f"{e}. {absolute_url}")
+                        click.echo(f"{e}")
+                        img_tag.decompose()
                         continue
                     # TODO:
                     # html rendering issues if image name contains %!
@@ -95,5 +98,4 @@ class Article:
                     click.echo(f"Downloaded: images/{Path(image_path).name}")
                 else:
                     img_tag.decompose()
-                    click.echo(f"Failed to download image: {absolute_url}")
         self.content = str(soup)
