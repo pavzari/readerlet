@@ -35,7 +35,7 @@ def test_extract_to_epub(tmp_path, article):
         result = runner.invoke(
             cli, ["extract", "https://example.com", "-e", str(tmp_path)]
         )
-        assert "EPUB file created:" in result.output
+        assert "EPUB created:" in result.output
         epub_path = tmp_path / "Test-title.epub"
         assert epub_path.exists()
 
@@ -51,7 +51,7 @@ def test_extract_to_epub_remove_images_hyperlinks(tmp_path, article):
         assert "img" not in article.content
         assert "figure" not in article.content
         assert "href" not in article.content
-        assert "EPUB file created:" in result.output
+        assert "EPUB created:" in result.output
         epub_path = tmp_path / "Test-title.epub"
         assert epub_path.exists()
 

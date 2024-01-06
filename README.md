@@ -1,9 +1,9 @@
 [![PyPI](https://img.shields.io/pypi/v/readerlet.svg)](https://pypi.org/project/readerlet/)
 [![Tests](https://github.com/pavzari/readerlet/workflows/Test/badge.svg)](https://github.com/pavzari/readerlet/actions?query=workflow%3ATest)
 
-A CLI utility for extracting readable content from web pages. Converts web articles to clean HTML or plain text using the [mozilla/readability](https://github.com/mozilla/readability) library. Extracted content can be packaged into EPUB or printed to stdout.
+A CLI utility for extracting readable content from web pages. Converts web articles to clean HTML or plain text using [mozilla/readability](https://github.com/mozilla/readability). Extracted content can be packaged into EPUB or printed to stdout.
 
-Includes Send-to-Kindle integration via the [stkclient](https://github.com/maxdjohnson/stkclient), allowing sending created EPUB articles directly to your Kindle device for offline reading.
+Includes Send to Kindle integration via the [stkclient](https://github.com/maxdjohnson/stkclient), allowing sending created EPUB articles directly to your Kindle device for offline reading.
 
 ## Installation
 

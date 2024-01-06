@@ -70,7 +70,7 @@ def test_extract_images(article, tmp_path):
     with patch.object(
         Article, "download_image", return_value=tmp_path / "test-image.jpg"
     ):
-        article.extract_images(tmp_path)
+        article.extract_images(tmp_path, for_kindle=False)
         assert len(article.images) == 1
         assert article.images[0][0] == "test-image.jpg"
         assert article.images[0][1] == "image/jpeg"
@@ -80,8 +80,48 @@ def test_extract_images(article, tmp_path):
 def test_download_image_fails_img_tag_decomposed(article, tmp_path):
     with patch.object(article, "download_image") as mock_download:
         mock_download.return_value = None
-        article.extract_images(tmp_path)
+        article.extract_images(tmp_path, for_kindle=True)
         assert len(article.images) == 0
         soup = BeautifulSoup(article.content, "html.parser")
         img_tags = soup.find_all("img")
         assert len(img_tags) == 0
+
+
+@pytest.fixture
+def article_webp():
+    return Article(
+        "https://example.com",
+        "Test title",
+        "Test byline",
+        "en",
+        "<p><a href='link'>Link</a> test</p><img  src='http://example.com/test-image.webp'><figure></figure>",
+        "Test text only content",
+    )
+
+
+def test_extract_images_webp_conversion(article_webp, tmp_path):
+    webp_image_path = tmp_path / "test-image.webp"
+    png_image_path = tmp_path / "test-image.png"
+
+    with patch.object(Article, "download_image", return_value=webp_image_path):
+        with patch.object(Article, "handle_webp_images", return_value=png_image_path):
+            article_webp.extract_images(tmp_path, for_kindle=True)
+
+    assert len(article_webp.images) == 1
+    assert article_webp.images[0][0] == "test-image.png"
+    assert article_webp.images[0][1] == "image/png"
+    assert f"images/test-image.png" in article_webp.content
+
+
+def test_extract_images_no_webp_conversion(article_webp, tmp_path):
+    webp_image_path = tmp_path / "test-image.webp"
+    png_image_path = tmp_path / "test-image.png"
+
+    with patch.object(Article, "download_image", return_value=webp_image_path):
+        with patch.object(Article, "handle_webp_images", return_value=png_image_path):
+            article_webp.extract_images(tmp_path, for_kindle=False)
+
+    assert len(article_webp.images) == 1
+    assert article_webp.images[0][0] == "test-image.webp"
+    assert article_webp.images[0][1] == "image/webp"
+    assert f"images/test-image.webp" in article_webp.content

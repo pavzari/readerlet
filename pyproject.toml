@@ -15,6 +15,7 @@ dependencies = [
     "requests",
     "stkclient",
     "Jinja2",
+    "pillow"
 ]
 
 [project.urls]

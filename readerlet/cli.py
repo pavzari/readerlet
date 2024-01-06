@@ -113,7 +113,6 @@ def send(url: str, remove_hyperlinks: bool, remove_images: bool) -> None:
 
     # TODO:
     # send an existing file on disk.
-    # send using smtp client.
 
     install_npm_packages()
     article = extract_content(url)
@@ -127,7 +126,10 @@ def send(url: str, remove_hyperlinks: bool, remove_images: bool) -> None:
     try:
         click.echo("Creating EPUB...")
         epub_path = create_epub(
-            article, str(Path(__file__).parent.resolve()), remove_images
+            article,
+            str(Path(__file__).parent.resolve()),
+            remove_images,
+            for_kindle=True,
         )
         click.echo("Sending to Kindle...")
         kindle_send(epub_path, article.byline, article.title)
@@ -171,7 +173,7 @@ def extract(
     remove_images: bool,
     stdout: bool,
 ) -> None:
-    """Extract and format a web content, save as EPUB or print to stdout."""
+    """Extract and format web content, save as EPUB or print to stdout."""
 
     install_npm_packages()
     article = extract_content(url)
@@ -184,8 +186,8 @@ def extract(
 
     if output_epub:
         click.echo("Creating EPUB...")
-        epub_path = create_epub(article, output_epub, remove_images)
-        click.secho(f"EPUB file created: {epub_path}", fg="green")
+        epub_path = create_epub(article, output_epub, remove_images, for_kindle=False)
+        click.secho(f"EPUB created: {epub_path}", fg="green")
 
     if stdout == "html":
         c = BeautifulSoup(article.content, "html.parser")
@@ -229,7 +231,7 @@ def kindle_login() -> None:
 
 
 def kindle_send(filepath: Path, author: str, title: str, format: str = "EPUB") -> None:
-    """Send EPUB to Kindle via the send to kindle service."""
+    """Send EPUB to Kindle via the send to kindle client."""
 
     config_file = "kindle_config.json"
     cfg = Path(click.get_app_dir("readerlet"), config_file)

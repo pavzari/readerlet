@@ -11,9 +11,11 @@ from jinja2 import Environment, FileSystemLoader
 from readerlet.article import Article
 
 
-def create_epub(article: Article, output_path: str, remove_images: bool) -> Path:
+def create_epub(
+    article: Article, output_path: str, remove_images: bool, for_kindle: bool
+) -> Path:
     env = Environment(
-        loader=FileSystemLoader(Path(__file__).parent / "templates"), autoescape=False
+        loader=FileSystemLoader(Path(__file__).parent / "templates"), autoescape=True
     )
 
     with TemporaryDirectory() as temp_dir:
@@ -23,7 +25,7 @@ def create_epub(article: Article, output_path: str, remove_images: bool) -> Path
             (temp_path / dir_name).mkdir(parents=True, exist_ok=True)
 
         if not remove_images:
-            article.extract_images(temp_path / "OEBPS/images")
+            article.extract_images(temp_path / "OEBPS/images", for_kindle)
 
         with (temp_path / "mimetype").open("w") as file:
             file.write("application/epub+zip")

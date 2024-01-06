@@ -13,6 +13,6 @@
       <p>Source: <a href="{{ article.url }}">{{ article.url }}</a></p>
     </header>
     <hr/>
-    <div class="main_content">{{ article.content }}</div>
+    <div class="main_content">{{ article.content | safe }}</div>
   </body>
 </html>
