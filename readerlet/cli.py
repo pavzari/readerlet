@@ -80,7 +80,7 @@ def extract_content(url: str) -> Article:
                 raise click.ClickException("Content not extracted.")
             return Article(url, title, byline, lang, content, text_content)
     except subprocess.CalledProcessError:
-        raise click.ClickException("Error extracting article.")
+        raise click.ClickException("Failed to extract article.")
 
 
 @click.group()
@@ -93,7 +93,11 @@ def cli():
 
 
 @cli.command()
-@click.argument("url", required=True, type=str)
+@click.argument(
+    "input",
+    required=True,
+    type=str,
+)
 @click.option(
     "--remove-hyperlinks",
     "-h",
@@ -108,34 +112,63 @@ def cli():
     default=False,
     help="Remove image-related elements from content.",
 )
-def send(url: str, remove_hyperlinks: bool, remove_images: bool) -> None:
-    """Extract web content as EPUB and send to Kindle."""
+def send(input: str, remove_hyperlinks: bool, remove_images: bool) -> None:
+    """Send content to Kindle. Accepts a URL or a path to a local file.
+    If a file path, sends its contents to Kindle.
+    If a URL, extracts and sends its web content to Kindle"""
 
-    # TODO:
-    # send an existing file on disk.
+    # stk api will reject the file if either author or title are missing.
+    # No extension or unsupported extension: stkclient will raise APIError.
+    # handle exeptions for re-authentication and api error separately.
+    # epub send with another extension (.gif, html) works.
+    """
+    Supported file types include:
+    Microsoft Word (.DOC, .DOCX)
+    HTML (.HTML, .HTM)
+    RTF (.RTF)
+    Text (.TXT)
+    JPEG (.JPEG, .JPG)
+    GIF (.GIF)
+    PNG (.PNG)
+    BMP (.BMP)
+    PDF (.PDF)
+    EPUB (.EPUB)
+    """
 
-    install_npm_packages()
-    article = extract_content(url)
+    if Path(input).is_file():
+        if remove_hyperlinks or remove_images:
+            raise click.UsageError("Flags -i and -h cannot be used with a file path.")
 
-    if remove_hyperlinks:
-        article.remove_hyperlinks()
+        file_extension = Path(input).suffix[1:]
+        if not file_extension:
+            raise click.ClickException("File must have an extension.")
 
-    if remove_images:
-        article.remove_images()
+        click.echo("Sending file to Kindle...")
+        kindle_send(Path(input), author="Test", title="Test", format=file_extension)
+        click.secho("File sent.", fg="green")
+    else:
+        install_npm_packages()
+        article = extract_content(input)
 
-    try:
-        click.echo("Creating EPUB...")
-        epub_path = create_epub(
-            article,
-            str(Path(__file__).parent.resolve()),
-            remove_images,
-            for_kindle=True,
-        )
-        click.echo("Sending to Kindle...")
-        kindle_send(epub_path, article.byline, article.title)
-        click.secho("EPUB sent.", fg="green")
-    finally:
-        epub_path.unlink(missing_ok=True)
+        if remove_hyperlinks:
+            article.remove_hyperlinks()
+
+        if remove_images:
+            article.remove_images()
+
+        try:
+            click.echo("Creating EPUB...")
+            epub_path = create_epub(
+                article,
+                str(Path(__file__).parent.resolve()),
+                remove_images,
+                for_kindle=True,
+            )
+            click.echo("Sending to Kindle...")
+            kindle_send(epub_path, article.byline, article.title, format="EPUB")
+            click.secho("EPUB sent.", fg="green")
+        finally:
+            epub_path.unlink(missing_ok=True)
 
 
 @cli.command()
@@ -230,7 +263,7 @@ def kindle_login() -> None:
             break
 
 
-def kindle_send(filepath: Path, author: str, title: str, format: str = "EPUB") -> None:
+def kindle_send(filepath: Path, author: str, title: str, format: str) -> None:
     """Send EPUB to Kindle via the send to kindle client."""
 
     config_file = "kindle_config.json"
@@ -248,9 +281,9 @@ def kindle_send(filepath: Path, author: str, title: str, format: str = "EPUB") -
         client.send_file(
             filepath, destinations, author=author, title=title, format=format
         )
-    except APIError:
+    except APIError as e:
         # token expiration?
-        raise click.ClickException("Authenticate with 'readerlet kindle-login'.")
+        raise click.ClickException(f"Authenticate with 'readerlet kindle-login'. {e}")
     except json.JSONDecodeError:
         raise click.ClickException(f"File '{cfg}' is not a valid JSON file.")
     except Exception as e:

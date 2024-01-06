@@ -88,3 +88,9 @@ def test_send_kindle_config_file_not_found(mock_extract, article):
             "Error: Kindle configuration file not found. Use 'readerlet kindle-login'."
             in result.output
         )
+
+
+def test_send_kindle_invalid_url_raise_error(article):
+    runner = CliRunner()
+    result = runner.invoke(cli, ["send", "invalid-url"])
+    assert "Error: Error extracting article.\n" in result.output
