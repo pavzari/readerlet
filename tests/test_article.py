@@ -41,7 +41,7 @@ def test_extract_content_unsuccessful_extraction(mock_subprocess_run):
         returncode=1, cmd="node"
     )
     url = "http://example.com"
-    with pytest.raises(click.ClickException, match="Error extracting article."):
+    with pytest.raises(click.ClickException, match="Failed to extract article."):
         extract_content(url)
 
 
@@ -110,7 +110,7 @@ def test_extract_images_webp_conversion(article_webp, tmp_path):
     assert len(article_webp.images) == 1
     assert article_webp.images[0][0] == "test-image.png"
     assert article_webp.images[0][1] == "image/png"
-    assert f"images/test-image.png" in article_webp.content
+    assert "images/test-image.png" in article_webp.content
 
 
 def test_extract_images_no_webp_conversion(article_webp, tmp_path):
@@ -124,4 +124,4 @@ def test_extract_images_no_webp_conversion(article_webp, tmp_path):
     assert len(article_webp.images) == 1
     assert article_webp.images[0][0] == "test-image.webp"
     assert article_webp.images[0][1] == "image/webp"
-    assert f"images/test-image.webp" in article_webp.content
+    assert "images/test-image.webp" in article_webp.content

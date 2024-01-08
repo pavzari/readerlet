@@ -72,7 +72,11 @@ def extract_content(url: str) -> Article:
                 if article_data["byline"] is not None
                 else urlparse(url).netloc
             )
-            lang = article_data.get("lang")
+            lang = (
+                article_data["lang"]
+                if article_data["lang"] and article_data["lang"].strip()
+                else "en"
+            )
             content = article_data.get("content")
             text_content = re.sub(r"\s+", " ", article_data.get("textContent", ""))
             # TODO: date
@@ -94,7 +98,7 @@ def cli():
 
 @cli.command()
 @click.argument(
-    "input",
+    "source",
     required=True,
     type=str,
 )
@@ -112,43 +116,54 @@ def cli():
     default=False,
     help="Remove image-related elements from content.",
 )
-def send(input: str, remove_hyperlinks: bool, remove_images: bool) -> None:
-    """Send content to Kindle. Accepts a URL or a path to a local file.
-    If a file path, sends its contents to Kindle.
-    If a URL, extracts and sends its web content to Kindle"""
+def send(source: str, remove_hyperlinks: bool, remove_images: bool) -> None:
+    """Send content to Kindle.
 
-    # stk api will reject the file if either author or title are missing.
-    # No extension or unsupported extension: stkclient will raise APIError.
-    # handle exeptions for re-authentication and api error separately.
-    # epub send with another extension (.gif, html) works.
-    """
-    Supported file types include:
-    Microsoft Word (.DOC, .DOCX)
-    HTML (.HTML, .HTM)
-    RTF (.RTF)
-    Text (.TXT)
-    JPEG (.JPEG, .JPG)
-    GIF (.GIF)
-    PNG (.PNG)
-    BMP (.BMP)
-    PDF (.PDF)
-    EPUB (.EPUB)
-    """
+    SOURCE: URL or a path to a local file.
 
-    if Path(input).is_file():
+    If a file path, sends it to Kindle.
+    If a URL, extracts and sends web content to Kindle."""
+
+    SUPPORTED_KINDLE_TYPES = [
+        ".doc",
+        ".docx",
+        ".html",
+        ".htm",
+        ".rtf",
+        ".txt",
+        ".jpeg",
+        ".jpg",
+        ".gif",
+        ".png",
+        ".bmp",
+        ".pdf",
+        ".epub",
+    ]
+
+    if Path(source).is_file():
         if remove_hyperlinks or remove_images:
             raise click.UsageError("Flags -i and -h cannot be used with a file path.")
 
-        file_extension = Path(input).suffix[1:]
+        file_extension = Path(source).suffix
         if not file_extension:
             raise click.ClickException("File must have an extension.")
 
+        if file_extension not in SUPPORTED_KINDLE_TYPES:
+            raise click.ClickException(f"Unsupported file extension: {file_extension}")
+
+        # Stk api will reject the file if either the author or title is missing.
+        # Use the file name for both when sending a local file.
+        file_name = Path(source).stem
+
         click.echo("Sending file to Kindle...")
-        kindle_send(Path(input), author="Test", title="Test", format=file_extension)
+        kindle_send(
+            Path(source), author=file_name, title=file_name, format=file_extension[1:]
+        )
         click.secho("File sent.", fg="green")
+
     else:
         install_npm_packages()
-        article = extract_content(input)
+        article = extract_content(source)
 
         if remove_hyperlinks:
             article.remove_hyperlinks()
@@ -273,18 +288,28 @@ def kindle_send(filepath: Path, author: str, title: str, format: str) -> None:
         raise click.ClickException(
             "Kindle configuration file not found. Use 'readerlet kindle-login'."
         )
+
+    # Tracks whether an error occurred before or during file sending using `before_sending`.
+    # stkclient raises the same APIError for expired tokens and file sending errors.
+    before_sending = True
+
     try:
         with open(cfg) as f:
             client = stkclient.Client.load(f)
         devices = client.get_owned_devices()
         destinations = [d.device_serial_number for d in devices]
+        before_sending = False
         client.send_file(
             filepath, destinations, author=author, title=title, format=format
         )
-    except APIError as e:
-        # token expiration?
-        raise click.ClickException(f"Authenticate with 'readerlet kindle-login'. {e}")
+    except APIError:
+        if before_sending:
+            raise click.ClickException("Re-authenticate with 'readerlet kindle-login'.")
+        else:
+            raise click.ClickException(
+                "Failed to send file. Check the file format and content."
+            )
     except json.JSONDecodeError:
         raise click.ClickException(f"File '{cfg}' is not a valid JSON file.")
     except Exception as e:
-        raise click.ClickException(f"{e}")
+        raise click.ClickException(e)

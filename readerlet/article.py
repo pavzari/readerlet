@@ -1,11 +1,11 @@
 from pathlib import Path
 from typing import Union
 from urllib.parse import unquote, urljoin, urlparse
-from PIL import Image
 
 import click
 import requests
 from bs4 import BeautifulSoup
+from PIL import Image
 
 
 class Article:

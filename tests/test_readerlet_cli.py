@@ -93,4 +93,4 @@ def test_send_kindle_config_file_not_found(mock_extract, article):
 def test_send_kindle_invalid_url_raise_error(article):
     runner = CliRunner()
     result = runner.invoke(cli, ["send", "invalid-url"])
-    assert "Error: Error extracting article.\n" in result.output
+    assert "Error: Failed to extract article.\n" in result.output

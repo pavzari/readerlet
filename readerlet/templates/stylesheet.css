@@ -13,7 +13,6 @@ hr {
 }
 
 a {
-    text-decoration: underline;
 	color: #000;
 }
 
@@ -72,7 +71,7 @@ a {
 	width: 100%;
 	border-collapse: collapse;
 	page-break-inside: auto;
-	font-size: 0.9em;
+	font-size: 85%;
 	line-height: 1.44;
 	margin: 1.44em 0;
 	background-color: #fbfbfb;

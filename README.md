@@ -24,10 +24,14 @@ For help, run:
 
     readerlet --help
 
-The `readerlet send` packages content as EPUB file and sends it to your Kindle. You must first authorize the application with `readerlet kindle-login`. This feature stores credentials locally.
+The `readerlet send` packages web content as EPUB file and sends it to your Kindle. You must first authorize the application with `readerlet kindle-login`. This feature stores credentials locally.
 
     readerlet kindle-login
     readerlet send <url>
+
+To send local file instead:
+
+    readerlet send <path/to/local/file>
 
 The `extract` command extracts content from URL and outputs an EPUB file to specified directory if used with `-e` flag:
 
