@@ -1,6 +1,6 @@
 [project]
 name = "readerlet"
-version = "0.1.4"
+version = "0.2.0"
 description = "A command-line utility for extracting and packaging web content for offline reading."
 readme = "README.md"
 authors = [{name = "pavzari"}]
