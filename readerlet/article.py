@@ -1,6 +1,8 @@
+import base64
 from pathlib import Path
-from typing import Union
+from typing import Tuple, Union
 from urllib.parse import unquote, urljoin, urlparse
+from uuid import uuid4
 
 import click
 import requests
@@ -43,26 +45,65 @@ class Article:
         self.content = str(soup)
 
     @staticmethod
-    def download_image(url: str, temp_dir: Path) -> Union[Path, None]:
-        # TODO: base64 encoded images.
+    def download_image(url: str, temp_dir: Path) -> Union[Tuple[Path, str], None]:
+        """Download image. Return downloaded image path and extension."""
         try:
+            if "data:image" in url and "base64" in url:
+                mimetype = url.split(":")[1].split(";")[0]
+                extension = mimetype.split("/")[1]
+                url = url.split("base64,")[1]
+                data = base64.b64decode(url)
+                image_path = temp_dir / (str(uuid4()) + "." + extension)
+
+                with open(image_path, "wb") as img:
+                    img.write(data)
+
+                return image_path, extension
+
             response = requests.get(url, stream=True, timeout=10)
             response.raise_for_status()
-            filename = temp_dir / Path(urlparse(url).path).name
-            with open(filename, "wb") as file:
+
+            if "." in urlparse(url).path:
+                extension = urlparse(url).path.split(".")[-1]
+                image_name = urlparse(url).path.split("/")[-1]
+
+            elif response.headers.get("Content-Type", "").startswith("image/"):
+                extension = response.headers["Content-Type"].split("/")[1]
+                image_name = str(uuid4()) + "." + extension
+
+            else:
+                return None
+
+            image_path = temp_dir / image_name
+
+            with open(image_path, "wb") as img:
                 for chunk in response.iter_content(1024):
-                    file.write(chunk)
-            return filename
-        except requests.exceptions.RequestException as e:
-            click.echo(f"Failed to download image: {e}")
+                    img.write(chunk)
+
+            return image_path, extension
+
+        except (OSError, requests.exceptions.RequestException, base64.binascii.Error):
             return None
 
     @staticmethod
-    def check_mediatype(name: str) -> str:
-        """Check image extension and return mimetype."""
-        ext = name.split(".")[-1].lower()
+    def convert_image(temp_dir: Path, image_path: Path) -> Union[Path, None]:
+        """Convert unsupported image type to PNG for EPUB/Kindle compatibility."""
+        # TODO: avif
+        try:
+            webp_image = Image.open(image_path)
+            png_path = temp_dir / (image_path.stem + ".png")
+            webp_image.save(png_path, format="PNG")
+            return png_path
+        except (OSError, ValueError):
+            return None
+        finally:
+            image_path.unlink(missing_ok=True)
 
-        ext_mimetype = {
+    def extract_images(self, temp_dir: Path, for_kindle: bool) -> None:
+        """Download images and replace src with local path."""
+        # TODO: src vs data-src.
+
+        EPUB_IMAGE_TYPES = {
             "png": "image/png",
             "jpg": "image/jpeg",
             "jpeg": "image/jpeg",
@@ -71,57 +112,36 @@ class Article:
             "webp": "image/webp",
         }
 
-        if ext in ext_mimetype:
-            return ext_mimetype[ext]
-        else:
-            raise ValueError(f"Unsupported EPUB 3 image format: {ext}. Removing...")
-
-    @staticmethod
-    def handle_webp_images(temp_dir: Path, image_path: Path) -> Path:
-        """Convert WebP image to PNG for EPUB compatibility"""
-        webp_image = Image.open(image_path)
-        png_path = temp_dir / (image_path.stem + ".png")
-        webp_image.save(png_path, format="PNG")
-        return png_path
-
-    def extract_images(self, temp_dir: Path, for_kindle: bool) -> None:
-        """Download images and replace src with local path."""
         soup = BeautifulSoup(self.content, "html.parser")
 
         for img_tag in soup.find_all("img"):
             src = img_tag.get("src")
+
             if src:
                 absolute_url = unquote(urljoin(self.url, src)).strip()
-                try:
-                    # TODO: src vs data-src..
-                    mimetype = self.check_mediatype(Path(absolute_url).name)
+                absolute_url = absolute_url.split("?")[0]
+                image = self.download_image(absolute_url, temp_dir)
 
-                    if for_kindle and mimetype == "image/webp":
-                        webp_path = self.download_image(absolute_url, temp_dir)
-                        if webp_path:
-                            png_path = self.handle_webp_images(temp_dir, webp_path)
-                            webp_path.unlink(missing_ok=True)
-                            img_tag["src"] = f"images/{Path(png_path).name}"
-                            self.images.append((Path(png_path).name, "image/png"))
-                            click.echo(
-                                f"Downloaded and converted: images/{Path(png_path).name}"
-                            )
-                            continue
-                        else:
+                if image:
+                    image_path, extension = image
+                    mimetype = EPUB_IMAGE_TYPES.get(extension)
+
+                    if not mimetype or (for_kindle and mimetype == "image/webp"):
+                        image_path = self.convert_image(temp_dir, image_path)
+                        mimetype = "image/png"
+
+                        if not image_path:
                             img_tag.decompose()
+                            click.echo(f"Failed to convert image: {src}")
                             continue
-                except ValueError as e:
-                    click.echo(e)
-                    img_tag.decompose()
-                    continue
 
-                image_path = self.download_image(absolute_url, temp_dir)
-                if image_path:
-                    img_tag["src"] = f"images/{Path(image_path).name}"
                     image_name = Path(image_path).name
+                    img_tag["src"] = f"images/{image_name}"
                     self.images.append((image_name, mimetype))
-                    click.echo(f"Downloaded: images/{Path(image_path).name}")
+                    click.echo(f"Downloaded: images/{image_name}")
+
                 else:
+                    click.echo(f"Failed to download image: {src}")
                     img_tag.decompose()
 
         self.content = str(soup)

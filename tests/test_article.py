@@ -68,13 +68,43 @@ def test_remove_images(article):
 
 def test_extract_images(article, tmp_path):
     with patch.object(
-        Article, "download_image", return_value=tmp_path / "test-image.jpg"
+        Article, "download_image", return_value=(tmp_path / "test-image.jpg", "jpg")
     ):
         article.extract_images(tmp_path, for_kindle=False)
         assert len(article.images) == 1
         assert article.images[0][0] == "test-image.jpg"
         assert article.images[0][1] == "image/jpeg"
         assert "images/test-image.jpg" in article.content
+
+
+def test_extract_images_with_base64(article, tmp_path):
+    with patch.object(
+        Article, "download_image", return_value=(tmp_path / "test-base64.png", "png")
+    ):
+        article.content = (
+            '<img src="data:image/png;base64,base64data" alt="Test Image base64">'
+        )
+        article.extract_images(tmp_path, for_kindle=False)
+
+        assert len(article.images) == 1
+        assert article.images[0][0] == "test-base64.png"
+        assert article.images[0][1] == "image/png"
+        assert "images/test-base64.png" in article.content
+
+
+def test_extract_images_check_content_type_header(article, tmp_path):
+    with patch.object(
+        Article,
+        "download_image",
+        return_value=(tmp_path / "test-content-type.jpg", "jpg"),
+    ):
+        article.content = '<img src="https://example.com/image-url" alt="Test Image">'
+        article.extract_images(tmp_path, for_kindle=False)
+
+        assert len(article.images) == 1
+        assert article.images[0][0] == "test-content-type.jpg"
+        assert article.images[0][1] == "image/jpeg"
+        assert "images/test-content-type.jpg" in article.content
 
 
 def test_download_image_fails_img_tag_decomposed(article, tmp_path):
@@ -103,8 +133,10 @@ def test_extract_images_webp_conversion(article_webp, tmp_path):
     webp_image_path = tmp_path / "test-image.webp"
     png_image_path = tmp_path / "test-image.png"
 
-    with patch.object(Article, "download_image", return_value=webp_image_path):
-        with patch.object(Article, "handle_webp_images", return_value=png_image_path):
+    with patch.object(
+        Article, "download_image", return_value=(webp_image_path, "webp")
+    ):
+        with patch.object(Article, "convert_image", return_value=png_image_path):
             article_webp.extract_images(tmp_path, for_kindle=True)
 
     assert len(article_webp.images) == 1
@@ -117,8 +149,10 @@ def test_extract_images_no_webp_conversion(article_webp, tmp_path):
     webp_image_path = tmp_path / "test-image.webp"
     png_image_path = tmp_path / "test-image.png"
 
-    with patch.object(Article, "download_image", return_value=webp_image_path):
-        with patch.object(Article, "handle_webp_images", return_value=png_image_path):
+    with patch.object(
+        Article, "download_image", return_value=(webp_image_path, "webp")
+    ):
+        with patch.object(Article, "convert_image", return_value=png_image_path):
             article_webp.extract_images(tmp_path, for_kindle=False)
 
     assert len(article_webp.images) == 1

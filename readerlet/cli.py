@@ -89,7 +89,7 @@ def extract_content(url: str) -> Article:
 
 @click.group()
 @click.version_option()
-def cli():
+def cli() -> None:
     """
     readerlet.
     """
