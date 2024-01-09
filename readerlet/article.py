@@ -1,6 +1,6 @@
 import base64
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Union
 from urllib.parse import unquote, urljoin, urlparse
 from uuid import uuid4
 
@@ -45,7 +45,7 @@ class Article:
         self.content = str(soup)
 
     @staticmethod
-    def download_image(url: str, temp_dir: Path) -> Tuple[Path, str] | None:
+    def download_image(url: str, temp_dir: Path) -> Union[Tuple[Path, str], None]:
         """Download image. Return downloaded image path and extension."""
         try:
             if "data:image" in url and "base64" in url:
@@ -86,7 +86,7 @@ class Article:
             return None
 
     @staticmethod
-    def convert_image(temp_dir: Path, image_path: Path) -> Path | None:
+    def convert_image(temp_dir: Path, image_path: Path) -> Union[Path, None]:
         """Convert unsupported image type to PNG for EPUB/Kindle compatibility."""
         # TODO: avif
         try:
