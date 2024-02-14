@@ -46,10 +46,7 @@ a {
 	color: #2c2c2c;
 	border-top: 1px solid #ddd;
 	border-bottom: 1px solid #ddd;
-	overflow-x: scroll;
 	overflow: auto;
-	overflow-y: hidden;
-	word-wrap: initial;
 	word-break: keep-all;
 	white-space: pre;
 }

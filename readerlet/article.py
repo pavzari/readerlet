@@ -90,9 +90,9 @@ class Article:
         """Convert unsupported image type to PNG for EPUB/Kindle compatibility."""
         # TODO: avif
         try:
-            webp_image = Image.open(image_path)
+            image = Image.open(image_path)
             png_path = temp_dir / (image_path.stem + ".png")
-            webp_image.save(png_path, format="PNG")
+            image.save(png_path, format="PNG")
             return png_path
         except (OSError, ValueError):
             return None
