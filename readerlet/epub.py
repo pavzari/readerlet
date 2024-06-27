@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from uuid import uuid4
-from zipfile import ZIP_DEFLATED, ZipFile
+from zipfile import ZIP_DEFLATED, ZIP_STORED, ZipFile
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -26,9 +26,6 @@ def create_epub(
 
         if not remove_images:
             article.extract_images(temp_path / "OEBPS/images", for_kindle)
-
-        with (temp_path / "mimetype").open("w") as file:
-            file.write("application/epub+zip")
 
         shutil.copy(
             Path(__file__).parent / "templates" / "container.xml",
@@ -57,6 +54,10 @@ def create_epub(
         epub_name = f"{clean_title(article.title)}.epub"
 
         with ZipFile(Path(output_path) / epub_name, "w", ZIP_DEFLATED) as archive:
+            # Add mimetype file first, without compression as per epub3 specs.
+            archive.writestr(
+                "mimetype", "application/epub+zip", compress_type=ZIP_STORED
+            )
             for file_path in temp_path.rglob("*"):
                 archive.write(file_path, arcname=file_path.relative_to(temp_path))
 
