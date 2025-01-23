@@ -7,15 +7,16 @@ Includes Send to Kindle integration via the [stkclient](https://github.com/maxdj
 
 ## Installation
 
-Install using `pip` or `pipx`:
+Install using `uv` or `pip`:
 
+    uv tool install readerlet
     pip install readerlet
-    pipx install readerlet
 
 Note that this utility requires Node.js.
 
 For convenience, the [nodejs-bin](https://github.com/samwillis/nodejs-pypi) package containing node binary & npm can be installed optionally as an extra dependency:
 
+    uv tool install 'readerlet[node]'
     pip install 'readerlet[node]'
 
 ## Usage
