@@ -25,9 +25,8 @@ For help, run:
 
     readerlet --help
 
-The `readerlet send` packages web content as EPUB file and sends it to your Kindle. You must first authorize the application with `readerlet kindle-login`. This feature stores credentials locally.
+The `readerlet send` packages web content as EPUB file and sends it to your Kindle. This feature stores credentials locally.
 
-    readerlet kindle-login
     readerlet send <url>
 
 To send local file instead:
@@ -55,6 +54,12 @@ Remove images and hyperlinks:
 
     readerlet extract <url> -i -h -o html
     readerlet send <url> -i -h
+
+## Authentication
+
+Authentication is handled automatically when you first use the `readerlet send` command. If your credentials expire, you will be prompted to log in again.
+
+The `readerlet kindle-login` command is also available for manually authenticating or switching between Amazon accounts.
 
 ## Development
 

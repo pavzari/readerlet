@@ -1,8 +1,9 @@
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
+from stkclient.api import APIError
 
 from readerlet.article import Article
 from readerlet.cli import cli
@@ -78,16 +79,30 @@ def test_extract_print_content_text_to_stdout(article):
 
 
 @patch("readerlet.cli.extract_content")
-def test_send_kindle_config_file_not_found(mock_extract, article):
+@patch("readerlet.cli.kindle_login")
+def test_send_kindle_config_file_not_found(mock_kindle_login, mock_extract, article):
     runner = CliRunner()
     mock_extract.return_value = article
-    with patch.object(Path, "exists") as mock_exists:
-        mock_exists.return_value = False
-        result = runner.invoke(cli, ["send", "https://example.com"])
-        assert (
-            "Error: Kindle configuration file not found. Use 'readerlet kindle-login'."
-            in result.output
-        )
+    with patch.object(Path, "exists", return_value=False):
+        runner.invoke(cli, ["send", "https://example.com"])
+        mock_kindle_login.assert_called_once()
+
+
+@patch("readerlet.cli.extract_content")
+@patch("readerlet.cli.kindle_login")
+def test_send_kindle_expired_token_triggers_login(
+    mock_kindle_login, mock_extract, article
+):
+    runner = CliRunner()
+    mock_extract.return_value = article
+
+    with patch.object(Path, "exists", return_value=True):
+        with patch("stkclient.Client.load") as mock_client_load:
+            mock_client = MagicMock()
+            mock_client_load.return_value = mock_client
+            mock_client.get_owned_devices.side_effect = APIError("Missing token", None)
+            runner.invoke(cli, ["send", "https://example.com"])
+            mock_kindle_login.assert_called_once()
 
 
 def test_send_kindle_invalid_url_raise_error(article):

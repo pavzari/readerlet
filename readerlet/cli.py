@@ -140,6 +140,25 @@ def send(source: str, remove_hyperlinks: bool, remove_images: bool) -> None:
         ".epub",
     ]
 
+    def send_logic(file_path: Path, author: str, title: str, file_format: str):
+        config_file = "kindle_config.json"
+        cfg = Path(click.get_app_dir("readerlet"), config_file)
+
+        try:
+            click.echo("Sending to Kindle...")
+            kindle_send(file_path, author, title, format=file_format, config=cfg)
+            click.secho("Sent.", fg="green")
+        except (FileNotFoundError, json.JSONDecodeError, APIError) as e:
+            if isinstance(e, (FileNotFoundError, json.JSONDecodeError)):
+                click.echo("Kindle configuration not found or corrupt. Please log in.")
+            else:  # APIError
+                click.echo("Authentication expired. Please log in again.")
+
+            kindle_login()
+            click.echo("Retrying send...")
+            kindle_send(file_path, author, title, format=file_format, config=cfg)
+            click.secho("Sent.", fg="green")
+
     if Path(source).is_file():
         if remove_hyperlinks or remove_images:
             raise click.UsageError("Flags -i and -h cannot be used with a file path.")
@@ -155,11 +174,12 @@ def send(source: str, remove_hyperlinks: bool, remove_images: bool) -> None:
         # Use the file name for both when sending a local file.
         file_name = Path(source).stem
 
-        click.echo("Sending file to Kindle...")
-        kindle_send(
-            Path(source), author=file_name, title=file_name, format=file_extension[1:]
+        send_logic(
+            Path(source),
+            author=file_name,
+            title=file_name,
+            file_format=file_extension[1:],
         )
-        click.secho("File sent.", fg="green")
 
     else:
         install_npm_packages()
@@ -171,6 +191,7 @@ def send(source: str, remove_hyperlinks: bool, remove_images: bool) -> None:
         if remove_images:
             article.remove_images()
 
+        epub_path = None
         try:
             click.echo("Creating EPUB...")
             epub_path = create_epub(
@@ -179,11 +200,10 @@ def send(source: str, remove_hyperlinks: bool, remove_images: bool) -> None:
                 remove_images,
                 for_kindle=True,
             )
-            click.echo("Sending to Kindle...")
-            kindle_send(epub_path, article.byline, article.title, format="EPUB")
-            click.secho("EPUB sent.", fg="green")
+            send_logic(epub_path, article.byline, article.title, file_format="EPUB")
         finally:
-            epub_path.unlink(missing_ok=True)
+            if epub_path:
+                epub_path.unlink(missing_ok=True)
 
 
 @cli.command()
@@ -278,23 +298,17 @@ def kindle_login() -> None:
             break
 
 
-def kindle_send(filepath: Path, author: str, title: str, format: str) -> None:
+def kindle_send(
+    filepath: Path, author: str, title: str, format: str, config: Path
+) -> None:
     """Send EPUB to Kindle via the send to kindle client."""
-
-    config_file = "kindle_config.json"
-    cfg = Path(click.get_app_dir("readerlet"), config_file)
-
-    if not cfg.exists():
-        raise click.ClickException(
-            "Kindle configuration file not found. Use 'readerlet kindle-login'."
-        )
 
     # Tracks whether an error occurred before or during file sending using `before_sending`.
     # stkclient raises the same APIError for expired tokens and file sending errors.
     before_sending = True
 
     try:
-        with open(cfg) as f:
+        with open(config) as f:
             client = stkclient.Client.load(f)
         devices = client.get_owned_devices()
         destinations = [d.device_serial_number for d in devices]
@@ -304,12 +318,10 @@ def kindle_send(filepath: Path, author: str, title: str, format: str) -> None:
         )
     except APIError:
         if before_sending:
-            raise click.ClickException("Re-authenticate with 'readerlet kindle-login'.")
+            raise
         else:
             raise click.ClickException(
                 "Failed to send file. Check the file format and content."
             )
-    except json.JSONDecodeError:
-        raise click.ClickException(f"File '{cfg}' is not a valid JSON file.")
     except Exception as e:
-        raise click.ClickException(e)
+        raise click.ClickException(f"Error: {e}")
