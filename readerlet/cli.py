@@ -150,11 +150,14 @@ def send(source: str, remove_hyperlinks: bool, remove_images: bool) -> None:
             click.secho("Sent.", fg="green")
         except (FileNotFoundError, json.JSONDecodeError, APIError) as e:
             if isinstance(e, (FileNotFoundError, json.JSONDecodeError)):
-                click.echo("Kindle configuration not found or corrupt. Please log in.")
+                click.secho(
+                    "Kindle configuration not found or corrupt. Please log in.",
+                    fg="yellow",
+                )
             else:  # APIError
-                click.echo("Authentication expired. Please log in again.")
+                click.secho("Authentication expired. Please log in again.", fg="yellow")
 
-            kindle_login()
+            _perform_kindle_login_logic()
             click.echo("Retrying send...")
             kindle_send(file_path, author, title, format=file_format, config=cfg)
             click.secho("Sent.", fg="green")
@@ -265,10 +268,8 @@ def extract(
         click.echo(article.text_content)
 
 
-@cli.command()
-def kindle_login() -> None:
-    """Configure OAuth2 authentication with Amazon's Send-to-Kindle service."""
-
+def _perform_kindle_login_logic() -> None:
+    """Core logic for Kindle OAuth2 authentication."""
     config_file = "kindle_config.json"
     config_dir = Path(click.get_app_dir("readerlet"))
     config_dir.mkdir(parents=True, exist_ok=True)
@@ -292,10 +293,15 @@ def kindle_login() -> None:
             click.echo(f"Credentials saved to: {cfg}.")
             break
         except (EOFError, KeyboardInterrupt):
-            break
+            raise click.ClickException("Authentication cancelled.")
         except Exception as e:
-            click.echo(f"Error during authentication: {e}")
-            break
+            raise click.ClickException(f"Error during authentication: {e}")
+
+
+@cli.command()
+def kindle_login() -> None:
+    """Configure OAuth2 authentication with Amazon's Send-to-Kindle service."""
+    _perform_kindle_login_logic()
 
 
 def kindle_send(
@@ -323,5 +329,3 @@ def kindle_send(
             raise click.ClickException(
                 "Failed to send file. Check the file format and content."
             )
-    except Exception as e:
-        raise click.ClickException(f"Error: {e}")

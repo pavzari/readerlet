@@ -79,7 +79,7 @@ def test_extract_print_content_text_to_stdout(article):
 
 
 @patch("readerlet.cli.extract_content")
-@patch("readerlet.cli.kindle_login")
+@patch("readerlet.cli._perform_kindle_login_logic")
 def test_send_kindle_config_file_not_found(mock_kindle_login, mock_extract, article):
     runner = CliRunner()
     mock_extract.return_value = article
@@ -89,7 +89,7 @@ def test_send_kindle_config_file_not_found(mock_kindle_login, mock_extract, arti
 
 
 @patch("readerlet.cli.extract_content")
-@patch("readerlet.cli.kindle_login")
+@patch("readerlet.cli._perform_kindle_login_logic")
 def test_send_kindle_expired_token_triggers_login(
     mock_kindle_login, mock_extract, article
 ):
